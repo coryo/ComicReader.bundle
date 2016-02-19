@@ -3,11 +3,19 @@ import zipfile
 import os
 import stat
 import platform
-
+import json
+from __builtin__ import open, dir
 
 class Formats(object):
     CBR = 'cbr'
     CBZ = 'cbz'
+
+
+# constants https://github.com/Twoure/KissNetwork.bundle/blob/master/Contents/Services/Shared%20Code/domain.pys
+BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'ComicReader.bundle')
+MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Modules')
+SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.comicreader')
+DB_FILE = os.path.join(SUPPORT_PATH, 'db.json')
 
 
 def init_rar(bundle_path):
@@ -54,7 +62,21 @@ def get_archive(archive, fmt):
         return None
 
 
-def get_image(archive, filename, fmt):
+def get_image(archive, filename, fmt, user):
+    a = get_archive(archive, fmt)
+    try:
+        with open(DB_FILE, 'r') as f:
+            db = json.loads(f.read())
+    except Exception:
+        db = {}
+    db[user] = [archive, filename, fmt]
+    with open(DB_FILE, 'w') as f:
+        f.write(json.dumps(db))
+    Log.Info(db)
+    return DataObject(a.read(filename), mime_type(filename))
+
+
+def get_thumb(archive, filename, fmt):
     a = get_archive(archive, fmt)
     return DataObject(a.read(filename), mime_type(filename))
 

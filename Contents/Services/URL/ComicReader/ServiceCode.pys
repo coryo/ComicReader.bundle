@@ -1,4 +1,5 @@
 import formats
+from __builtin__ import dir, getattr
 
 
 def MetadataObjectForURL(url):
@@ -10,5 +11,5 @@ def MediaObjectsForURL(url):
 
 
 def GetImage(url):
-    archive, filename, fmt = url.split('comicreader://')[-1].split('|')
-    return formats.get_image(archive, filename, fmt)
+    archive, filename, fmt, user = url.split('comicreader://')[-1].split('|')
+    return formats.get_image(archive, filename, fmt, user)
