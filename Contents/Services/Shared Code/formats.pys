@@ -4,7 +4,7 @@ import os
 import stat
 import platform
 import json
-from __builtin__ import open, dir
+from io import open
 
 class Formats(object):
     CBR = 'cbr'
@@ -70,7 +70,7 @@ def get_image(archive, filename, fmt, user):
     except Exception:
         db = {}
     db[user] = [archive, filename, fmt]
-    with open(DB_FILE, 'w') as f:
+    with open(DB_FILE, 'wb') as f:
         f.write(json.dumps(db))
     Log.Info(db)
     return DataObject(a.read(filename), mime_type(filename))

@@ -4,7 +4,7 @@
 
 import os
 import json
-from __builtin__ import open
+from io import open
 
 NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
@@ -21,15 +21,25 @@ def Start():
 @handler(PREFIX, NAME)
 def MainMenu():
     oc = ObjectContainer(no_cache=True)
-    with open(SharedCodeService.formats.DB_FILE, 'r') as f:
-        db = json.loads(f.read())
-        if Request.Headers['X-Plex-Token'] in db:
-            archive, filename, fmt = db[Request.Headers['X-Plex-Token']]
-            title = archive.split('/')[-1].split('\\')[-1]
-            oc.add(DirectoryObject(key=Callback(Comic, archive=archive, fmt=fmt, filename=filename), title='>> resume {}'.format(title)))
+    if os.path.isfile(SharedCodeService.formats.DB_FILE):
+        with open(SharedCodeService.formats.DB_FILE, 'r') as f:
+            db = json.loads(f.read())
+            sid = get_session_identifier()
+            if sid in db:
+                archive, filename, fmt = db[sid]
+                title = archive.split('/')[-1].split('\\')[-1]
+                oc.add(DirectoryObject(key=Callback(Comic, archive=archive, fmt=fmt, filename=filename), title='>> resume {}'.format(title)))
     for x in BrowseDir(Prefs['cb_path']).objects:
         oc.add(x)
     return oc
+
+
+def get_session_identifier():
+    # token is prob not reliable but good enough for now
+    try:
+        return Request.Headers['X-Plex-Token']
+    except Exception:
+        return 'none'
 
 
 @route(PREFIX + '/browse')
@@ -73,7 +83,7 @@ def Comic(archive, fmt, filename=None):
             continue
         Log.Info(f)
         page = f.split('/')[-1] if '/' in f else f
-        oc.add(PhotoObject(url='comicreader://{}|{}|{}|{}'.format(archive, f, fmt, Request.Headers['X-Plex-Token']),
+        oc.add(PhotoObject(url='comicreader://{}|{}|{}|{}'.format(archive, f, fmt, get_session_identifier()),
                            title=unicode(page) if f != filename else '>> {}'.format(page),
                            thumb=Callback(SharedCodeService.formats.get_thumb,
                                           archive=archive,
