@@ -1,0 +1,14 @@
+import formats
+
+
+def MetadataObjectForURL(url):
+    return PhotoObject(title="na", summary="na")
+
+
+def MediaObjectsForURL(url):
+    return [MediaObject(parts=[PartObject(key=Callback(GetImage, url=url))])]
+
+
+def GetImage(url):
+    archive, filename, fmt = url.split('comicreader://')[-1].split('|')
+    return formats.get_image(archive, filename, fmt)

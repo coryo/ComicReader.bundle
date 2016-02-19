@@ -14,9 +14,7 @@ Format Support
 Plex Client Support
 -------------------
 
-**working**: OpenPHT, PMP, Plex Web, Android
-
-**not working**: iOS (won't load images but will load thumbnails)
+**working**: OpenPHT, PMP, Plex Web, Android, iOS
 
 Channel Preferences
 -------------------

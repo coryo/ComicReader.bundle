@@ -1,0 +1,70 @@
+import rarfile
+import zipfile
+import os
+import stat
+import platform
+
+
+class Formats(object):
+    CBR = 'cbr'
+    CBZ = 'cbz'
+
+
+def init_rar(bundle_path):
+    rarfile.UNRAR_TOOL = get_rar_dir(bundle_path)
+    try:
+        os.chmod(rarfile.UNRAR_TOOL, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+    except Exception as e:
+        Log.Error(e)
+    Log.Info('USING UNRAR EXECUTABLE: {}'.format(rarfile.UNRAR_TOOL))
+
+
+def get_rar_dir(bundle_path):
+    base_dir = os.path.abspath(os.path.join(bundle_path, 'Contents', 'bin'))
+    if Platform.OS == 'MacOSX':
+        return os.path.join(base_dir, 'darwin_amd64', 'unrar')
+    elif Platform.OS == 'Linux':
+        arch = platform.architecture()[0]
+        if arch == '64bit':
+            return os.path.join(base_dir, 'linux_amd64', 'unrar')
+        elif arch == '32bit':
+            return os.path.join(base_dir, 'linux_386', 'unrar')
+    elif Platform.OS == 'Windows':
+        return os.path.join(base_dir, 'windows_386', 'unrar.exe')
+
+
+def mime_type(filename):
+    ext = os.path.splitext(filename)[-1]
+    return {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.tiff': 'image/tiff',
+        '.bmp': 'image/bmp'
+    }[ext]
+
+
+def get_archive(archive, fmt):
+    if fmt == Formats.CBR:
+        return rarfile.RarFile(archive)
+    elif fmt == Formats.CBZ:
+        return zipfile.ZipFile(archive)
+    else:
+        return None
+
+
+def get_image(archive, filename, fmt):
+    a = get_archive(archive, fmt)
+    return DataObject(a.read(filename), mime_type(filename))
+
+
+def get_cover(archive, fmt):
+    a = get_archive(archive, fmt)
+    x = sorted([x for x in a.namelist() if not x.endswith('/')])
+    try:
+        cover = x[0]
+    except IndexError:
+        return None
+    else:
+        return DataObject(a.read(cover), mime_type(cover))
