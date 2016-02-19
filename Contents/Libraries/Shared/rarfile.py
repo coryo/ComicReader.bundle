@@ -90,6 +90,13 @@ from tempfile import mkstemp
 from subprocess import Popen, PIPE, STDOUT
 from datetime import datetime
 
+# Plex framework stuff
+try:
+    import __builtin__
+    open = __builtin__._open
+except Exception:
+    pass
+
 # only needed for encryped headers
 try:
     from Crypto.Cipher import AES
@@ -190,7 +197,7 @@ TEST_ARGS = ('t', '-idq')
 #
 
 ALT_TOOL = 'bsdtar'
-ALT_OPEN_ARGS = ('-x', '--to-stdout', '-f')
+ALT_OPEN_ARGS = OPEN_ARGS # ('-x', '--to-stdout', '-f')
 ALT_EXTRACT_ARGS = ('-x', '-f')
 ALT_TEST_ARGS = ('-t', '-f')
 ALT_CHECK_ARGS = ('--help',)
@@ -1752,7 +1759,7 @@ class XFile(object):
             self._fd.seek(0)
         else:
             self._need_close = True
-            self._fd = open(xfile, 'rb')
+            self._fd = open(xfile, 'rb', bufsize)
     def read(self, n=None):
         return self._fd.read(n)
     def tell(self):

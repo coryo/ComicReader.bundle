@@ -10,6 +10,7 @@ import rarfile
 import zipfile
 
 
+
 NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
 
@@ -41,7 +42,7 @@ def BrowseDir(cur_dir):
         dir_list = os.listdir(cur_dir)
     except Exception:
         return ObjectContainer(header='bad path', message='bad path')
-    for item in os.listdir(cur_dir):
+    for item in dir_list:
         full_path = os.path.join(cur_dir, item)
         if os.path.isdir(full_path):
             oc.add(DirectoryObject(key=Callback(BrowseDir, cur_dir=full_path),
@@ -95,7 +96,7 @@ def GetCover(archive, fmt):
     except IndexError:
         return None
     else:
-        return DataObject(a.read(cover), 'image/jpeg')
+        return DataObject(a.read(cover), mime_type(cover))
 
 
 def mime_type(filename):
