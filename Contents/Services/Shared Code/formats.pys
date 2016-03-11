@@ -6,10 +6,7 @@ import platform
 import json
 from io import open
 
-class Formats(object):
-    CBR = 'cbr'
-    CBZ = 'cbz'
-
+FORMATS = ['.cbr', '.cbz']
 
 # constants https://github.com/Twoure/KissNetwork.bundle/blob/master/Contents/Services/Shared%20Code/domain.pys
 BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'ComicReader.bundle')
@@ -53,36 +50,38 @@ def mime_type(filename):
     }[ext]
 
 
-def get_archive(archive, fmt):
-    if fmt == Formats.CBR:
-        return rarfile.RarFile(archive)
-    elif fmt == Formats.CBZ:
-        return zipfile.ZipFile(archive)
-    else:
-        return None
+def get_archive(archive):
+    try:
+        ar = rarfile.RarFile(archive)
+    except rarfile.NotRarFile:
+        try:
+            ar = zipfile.ZipFile(archive)
+        except Exception:
+            ar = None
+    return ar
 
 
-def get_image(archive, filename, fmt, user):
-    a = get_archive(archive, fmt)
+def get_image(archive, filename, user):
+    a = get_archive(archive)
     try:
         with open(DB_FILE, 'r') as f:
             db = json.loads(f.read())
     except Exception:
         db = {}
-    db[user] = [archive, filename, fmt]
+    db[user] = [archive, filename]
     with open(DB_FILE, 'wb') as f:
         f.write(json.dumps(db))
     Log.Info(db)
     return DataObject(a.read(filename), mime_type(filename))
 
 
-def get_thumb(archive, filename, fmt):
-    a = get_archive(archive, fmt)
+def get_thumb(archive, filename):
+    a = get_archive(archive)
     return DataObject(a.read(filename), mime_type(filename))
 
 
-def get_cover(archive, fmt):
-    a = get_archive(archive, fmt)
+def get_cover(archive):
+    a = get_archive(archive)
     x = sorted([x for x in a.namelist() if not x.endswith('/')])
     try:
         cover = x[0]
