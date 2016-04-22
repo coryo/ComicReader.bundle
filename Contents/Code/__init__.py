@@ -21,7 +21,7 @@ def Start():
 @handler(PREFIX, NAME)
 def MainMenu():
     oc = ObjectContainer(no_cache=True)
-    if os.path.isfile(SharedCodeService.formats.DB_FILE):
+    if bool(Prefs['resume']) and os.path.isfile(SharedCodeService.formats.DB_FILE):
         with open(SharedCodeService.formats.DB_FILE, 'r') as f:
             db = json.loads(f.read())
             sid = get_session_identifier()
@@ -31,10 +31,18 @@ def MainMenu():
                 except:
                     archive, filename, fmt = db[sid]
                 title = archive.split('/')[-1].split('\\')[-1]
-                oc.add(DirectoryObject(key=Callback(Comic, archive=archive, filename=filename), title='>> resume {}'.format(title)))
+                oc.add(DirectoryObject(key=Callback(Comic, archive=archive, filename=filename),
+                                       title='>> resume {}'.format(title),
+                                       thumb=Callback(SharedCodeService.formats.get_cover,
+                                                      archive=archive)))
     for x in BrowseDir(Prefs['cb_path']).objects:
         oc.add(x)
     return oc
+
+
+def error_message(error, message):
+    Log.Error("ComicReader: {} - {}".format(error, message))
+    return MessageContainer(header=unicode(error), message=unicode(message))
 
 
 def get_session_identifier():
@@ -60,17 +68,22 @@ def BrowseDir(cur_dir):
         else:
             if os.path.splitext(item)[-1] not in SharedCodeService.formats.FORMATS:
                 continue
-            oc.add(DirectoryObject(key=Callback(Comic, archive=full_path),
-                                   title=unicode(os.path.splitext(item)[0]),
-                                   thumb=Callback(SharedCodeService.formats.get_cover,
-                                                  archive=full_path)))
+            oc.add(PhotoAlbumObject(key=Callback(Comic, archive=full_path),
+                                    rating_key=full_path,
+                                    title=unicode(os.path.splitext(item)[0]),
+                                    thumb=Callback(SharedCodeService.formats.get_cover,
+                                                   archive=full_path)))
     return oc
 
 
 @route(PREFIX + '/comic')
 def Comic(archive, filename=None):
     oc = ObjectContainer(title2=unicode(archive), no_cache=True)
-    a = SharedCodeService.formats.get_archive(archive)
+    try:
+        a = SharedCodeService.formats.get_archive(archive)
+    except SharedCodeService.formats.ArchiveError as e:
+        Log.Error(str(e))
+        return error_message('bad archive', 'bad archive')
     files = sorted(a.namelist())
     if filename is not None:
         pos = files.index(filename)
@@ -80,7 +93,7 @@ def Comic(archive, filename=None):
             continue
         Log.Info(f)
         page = f.split('/')[-1] if '/' in f else f
-        oc.add(PhotoObject(url='comicreader://{}|{}|{}'.format(archive, f, get_session_identifier()),
+        oc.add(PhotoObject(url=SharedCodeService.formats.build_url(archive, f, get_session_identifier()),
                            title=unicode(page) if f != filename else '>> {}'.format(page),
                            thumb=Callback(SharedCodeService.formats.get_thumb,
                                           archive=archive,

@@ -3,5 +3,11 @@
         "id":    "cb_path",
         "label": "cb_path",
         "type":  "text"
+    },
+    {
+        "id":    "resume",
+        "label": "resume",
+        "type":  "bool",
+        "default": false,
     }
 ]

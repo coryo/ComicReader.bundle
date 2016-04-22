@@ -1,4 +1,7 @@
-import rarfile
+try:  # import fails from the URL service. this prevents log spam of exceptions.
+    import rarfile
+except Exception:
+    pass
 import zipfile
 import os
 import stat
@@ -38,6 +41,14 @@ def get_rar_dir(bundle_path):
         return os.path.join(base_dir, 'windows_386', 'unrar.exe')
 
 
+def build_url(archive, file, identifier):
+    return 'comicreader://{}|{}|{}'.format(archive, file, identifier)
+
+
+def split_url(url):
+    return url.split('comicreader://')[-1].split('|')
+
+
 def mime_type(filename):
     ext = os.path.splitext(filename)[-1]
     return {
@@ -50,15 +61,22 @@ def mime_type(filename):
     }[ext]
 
 
+class ArchiveError(Exception):
+    pass
+
+
 def get_archive(archive):
+    """Some archives are given the wrong extension, so try opening it until it works."""
     try:
-        ar = rarfile.RarFile(archive)
-    except rarfile.NotRarFile:
-        try:
-            ar = zipfile.ZipFile(archive)
-        except Exception:
-            ar = None
-    return ar
+        return rarfile.RarFile(archive)
+    except Exception as e:
+        Log.Debug('get_archive: ' + str(e))
+    try:
+        return zipfile.ZipFile(archive)
+    except Exception as e:
+        Log.Debug('get_archive: ' + str(e))
+
+    raise ArchiveError
 
 
 def get_image(archive, filename, user):
@@ -76,16 +94,22 @@ def get_image(archive, filename, user):
 
 
 def get_thumb(archive, filename):
-    a = get_archive(archive)
-    return DataObject(a.read(filename), mime_type(filename))
+    try:
+        a = get_archive(archive)
+    except ArchiveError as e:
+        Log.Error(str(e))
+    else:
+        return DataObject(a.read(filename), mime_type(filename))
 
 
 def get_cover(archive):
-    a = get_archive(archive)
-    x = sorted([x for x in a.namelist() if not x.endswith('/')])
     try:
-        cover = x[0]
-    except IndexError:
-        return None
+        a = get_archive(archive)
+    except ArchiveError as e:
+        Log.Error(str(e))
     else:
-        return DataObject(a.read(cover), mime_type(cover))
+        x = sorted([x for x in a.namelist() if not x.endswith('/')])
+        if x:
+            return DataObject(a.read(x[0]), mime_type(x[0]))
+        else:
+            return None
