@@ -11,6 +11,11 @@
         "default": false,
     },
     {
+        "id":    "unrar",
+        "label": "unrar",
+        "type":  "text",
+    },
+    {
         "id":    "seven_zip",
         "label": "seven_zip",
         "type":  "text",

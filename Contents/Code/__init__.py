@@ -14,13 +14,16 @@ def Start():
     Route.Connect(PREFIX + '/getimage', SharedCodeService.formats.get_image)
     Route.Connect(PREFIX + '/getthumb', SharedCodeService.formats.get_thumb)
     Route.Connect(PREFIX + '/getcover', SharedCodeService.formats.get_cover)
-    SharedCodeService.formats.init_rar(Core.bundle_path)
     ObjectContainer.title1 = NAME
 
 
 @handler(PREFIX, NAME)
 def MainMenu():
-    SharedCodeService.formats.init_sz(Prefs['seven_zip'])
+    if not Prefs['unrar']:
+        SharedCodeService.formats.init_rar(Core.bundle_path)
+    else:
+        SharedCodeService.formats.init_rar_manual(Prefs['unrar'])
+    SharedCodeService.formats.init_sz_manual(Prefs['seven_zip'])
     oc = ObjectContainer(no_cache=True)
     if bool(Prefs['resume']) and os.path.isfile(SharedCodeService.formats.DB_FILE):
         with open(SharedCodeService.formats.DB_FILE, 'r') as f:

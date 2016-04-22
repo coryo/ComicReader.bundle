@@ -1,5 +1,6 @@
 {
     "cb_path": "Comics Path",
     "resume": "Enable resume feature",
+    "unrar": "Unrar Executable Path",
     "seven_zip": "7zip Executable Path"
 }

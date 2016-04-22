@@ -28,8 +28,14 @@ def init_rar(bundle_path):
     Log.Info('USING UNRAR EXECUTABLE: {}'.format(rarfile.UNRAR_TOOL))
 
 
-def init_sz(path):
+def init_rar_manual(path):
+    rarfile.UNRAR_TOOL = os.path.abspath(path)
+    Log.Info('USING UNRAR EXECUTABLE: {}'.format(rarfile.UNRAR_TOOL))
+
+
+def init_sz_manual(path):
     szipfile.SZ_TOOL = os.path.abspath(path)
+    Log.Info('USING 7ZIP EXECUTABLE: {}'.format(szipfile.SZ_TOOL))
 
 
 def get_rar_dir(bundle_path):
