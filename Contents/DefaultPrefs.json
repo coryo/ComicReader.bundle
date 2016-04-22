@@ -9,5 +9,10 @@
         "label": "resume",
         "type":  "bool",
         "default": false,
+    },
+    {
+        "id":    "seven_zip",
+        "label": "seven_zip",
+        "type":  "text",
     }
 ]

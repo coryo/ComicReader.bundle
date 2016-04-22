@@ -3,6 +3,7 @@ try:  # import fails from the URL service. this prevents log spam of exceptions.
 except Exception:
     pass
 import zipfile
+import szipfile
 import os
 import stat
 import platform
@@ -25,6 +26,10 @@ def init_rar(bundle_path):
     except Exception as e:
         Log.Error(e)
     Log.Info('USING UNRAR EXECUTABLE: {}'.format(rarfile.UNRAR_TOOL))
+
+
+def init_sz(path):
+    szipfile.SZ_TOOL = os.path.abspath(path)
 
 
 def get_rar_dir(bundle_path):
@@ -73,6 +78,10 @@ def get_archive(archive):
         Log.Debug('get_archive: ' + str(e))
     try:
         return zipfile.ZipFile(archive)
+    except Exception as e:
+        Log.Debug('get_archive: ' + str(e))
+    try:
+        return szipfile.SZipFile(archive)
     except Exception as e:
         Log.Debug('get_archive: ' + str(e))
 

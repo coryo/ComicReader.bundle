@@ -20,6 +20,7 @@ def Start():
 
 @handler(PREFIX, NAME)
 def MainMenu():
+    SharedCodeService.formats.init_sz(Prefs['seven_zip'])
     oc = ObjectContainer(no_cache=True)
     if bool(Prefs['resume']) and os.path.isfile(SharedCodeService.formats.DB_FILE):
         with open(SharedCodeService.formats.DB_FILE, 'r') as f:
