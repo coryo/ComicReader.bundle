@@ -10,7 +10,7 @@ import platform
 import json
 from io import open
 
-FORMATS = ['.cbr', '.cbz']
+FORMATS = ['.cbr', '.cbz', '.cb7', '.zip']
 
 # constants https://github.com/Twoure/KissNetwork.bundle/blob/master/Contents/Services/Shared%20Code/domain.pys
 BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'ComicReader.bundle')
