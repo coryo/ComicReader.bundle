@@ -1,4 +1,5 @@
 {
     "cb_path": "Comics Path",
-    "resume": "Enable resume feature"
+    "resume": "Enable resume feature",
+    "seven_zip": "7zip Executable Path"
 }
