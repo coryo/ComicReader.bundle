@@ -10,6 +10,24 @@ NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
 
 
+def error_message(error, message):
+    Log.Error("ComicReader: {} - {}".format(error, message))
+    return MessageContainer(header=unicode(error), message=unicode(message))
+
+
+def get_session_identifier():
+    # token is prob not reliable but good enough for now
+    try:
+        return Request.Headers['X-Plex-Token']
+    except Exception:
+        return 'none'
+
+
+def thumb_transcode(url, w=150, h=150):
+    """ use the PMS photo transcoder for thumbnails """
+    return '/photo/:/transcode?url={}&height={}&width={}&maxSize=1'.format(String.Quote(url), w, h)
+
+
 def Start():
     Route.Connect(PREFIX + '/getimage', SharedCodeService.formats.get_image)
     Route.Connect(PREFIX + '/getthumb', SharedCodeService.formats.get_thumb)
@@ -19,11 +37,9 @@ def Start():
 
 @handler(PREFIX, NAME)
 def MainMenu():
-    if not Prefs['unrar']:
-        SharedCodeService.formats.init_rar(Core.bundle_path)
-    else:
-        SharedCodeService.formats.init_rar_manual(Prefs['unrar'])
-    SharedCodeService.formats.init_sz_manual(Prefs['seven_zip'])
+    SharedCodeService.formats.init_rar(Prefs['unrar'])
+    SharedCodeService.formats.init_sz(Prefs['seven_zip'])
+
     oc = ObjectContainer(no_cache=True)
     if bool(Prefs['resume']) and os.path.isfile(SharedCodeService.formats.DB_FILE):
         with open(SharedCodeService.formats.DB_FILE, 'r') as f:
@@ -37,24 +53,11 @@ def MainMenu():
                 title = archive.split('/')[-1].split('\\')[-1]
                 oc.add(DirectoryObject(key=Callback(Comic, archive=archive, filename=filename),
                                        title='>> resume {}'.format(title),
-                                       thumb=Callback(SharedCodeService.formats.get_cover,
-                                                      archive=archive)))
+                                       thumb=thumb_transcode(Callback(SharedCodeService.formats.get_cover,
+                                                                      archive=archive))))
     for x in BrowseDir(Prefs['cb_path']).objects:
         oc.add(x)
     return oc
-
-
-def error_message(error, message):
-    Log.Error("ComicReader: {} - {}".format(error, message))
-    return MessageContainer(header=unicode(error), message=unicode(message))
-
-
-def get_session_identifier():
-    # token is prob not reliable but good enough for now
-    try:
-        return Request.Headers['X-Plex-Token']
-    except Exception:
-        return 'none'
 
 
 @route(PREFIX + '/browse')
@@ -75,8 +78,8 @@ def BrowseDir(cur_dir):
             oc.add(PhotoAlbumObject(key=Callback(Comic, archive=full_path),
                                     rating_key=full_path,
                                     title=unicode(os.path.splitext(item)[0]),
-                                    thumb=Callback(SharedCodeService.formats.get_cover,
-                                                   archive=full_path)))
+                                    thumb=thumb_transcode(Callback(SharedCodeService.formats.get_cover,
+                                                                   archive=full_path))))
     return oc
 
 
@@ -87,7 +90,7 @@ def Comic(archive, filename=None):
         a = SharedCodeService.formats.get_archive(archive)
     except SharedCodeService.formats.ArchiveError as e:
         Log.Error(str(e))
-        return error_message('bad archive', 'bad archive')
+        return error_message('bad archive', 'unable to open archive: {}'.format(archive))
     files = sorted(a.namelist())
     if filename is not None:
         pos = files.index(filename)
@@ -95,11 +98,10 @@ def Comic(archive, filename=None):
     for f in files:
         if f.endswith('/'):
             continue
-        Log.Info(f)
         page = f.split('/')[-1] if '/' in f else f
         oc.add(PhotoObject(url=SharedCodeService.formats.build_url(archive, f, get_session_identifier()),
                            title=unicode(page) if f != filename else '>> {}'.format(page),
-                           thumb=Callback(SharedCodeService.formats.get_thumb,
-                                          archive=archive,
-                                          filename=f)))
+                           thumb=thumb_transcode(Callback(SharedCodeService.formats.get_thumb,
+                                                          archive=archive,
+                                                          filename=f))))
     return oc
