@@ -1,20 +1,19 @@
-"""
-Note: this is bad.
-"""
 import sys
 import os
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE
+from binascii import unhexlify
 import re
 
-
-SZ_TOOL = None
+SIGNATURE = unhexlify('377abcaf271c')
+SZ_TOOL = '7z'
+SZ_L = re.compile(r'([\d-]+)\s+([\d:]+)\s+([A-Z.]{5})\s+(\d+)?\s+(\d+)?\s+([^\r\n]*)')
 
 
 class SZExecutableError(Exception):
     pass
 
 
-class SZBadArchive(Exception):
+class NotSZFile(Exception):
     pass
 
 
@@ -23,52 +22,56 @@ class SZipFile(object):
     def __init__(self, szfile):
         self.archive = os.path.abspath(szfile)
         self._list = None
-        if SZ_TOOL is None:
-            raise SZExecutableError('7z executable has not been set')
-        self.test()
+
+        with open(self.archive, 'rb') as f:
+            ksig = f.read(len(SIGNATURE))
+            if ksig != SIGNATURE:
+                raise NotSZFile('{} is not a 7z file.'.format(self.archive))
 
     def namelist(self):
+        """ Return a list of all the file names in the archive """
         if self._list is None:
-            p = custom_popen([SZ_TOOL, 'l', self.archive])
-            file_lines = []
-            lines = p.communicate()[0].splitlines()
-            for i, line in enumerate(lines):
-                if line.startswith('----'):
-                    x = 1
-                    while not lines[i + x].startswith('-'):
-                        file_lines.append(lines[i + x])
-                        x += 1
-                    break
-            self._list = file_lines
-        # Attr, Name  = x[20:25], x[53:]
-        return [x[53:] + ('/' if x[20:25].endswith('D....') else '') for x in self._list]
+            self._get_file_list()
+        return [x.name for x in self._list]
 
     def read(self, file):
-        cmd = [SZ_TOOL, 'x', '-so', self.archive, file.replace('\\', '/')]
+        """ Return data of file with `7z x -so archive.7z file` """
+        cmd = [SZ_TOOL, 'x', '-so', self.archive, file]
         p = custom_popen(cmd)
         return p.communicate()[0]
 
-    def test(self):
-        cmd = [SZ_TOOL, 't', self.archive]
-        p = custom_popen(cmd)
-        r = p.communicate()[0]
-        m = re.search(r'Everything is Ok', r, re.I)
-        if not m:
-            raise SZBadArchive('7zip: bad archive')
-
+    def _get_file_list(self):
+        """ get files from `7z l` """
+        p = custom_popen([SZ_TOOL, 'l', self.archive])
+        out = p.communicate()[0]
+        m = re.findall(SZ_L, out)
+        self._list = [FileInfo(*x) for x in m if len(x) == 6]
 
 
 def custom_popen(cmd):
-    """Disconnect cmd from parent fds, read only from stdout."""
-
-    # # needed for py2exe
-    creationflags = 0
-    if sys.platform == 'win32':
-        creationflags = 0x08000000 # CREATE_NO_WINDOW
-
-    # run command
     try:
-        p = Popen(cmd, bufsize=0, stdout=PIPE, stdin=PIPE, stderr=None, creationflags=creationflags)
+        p = Popen(cmd, bufsize=0, stdout=PIPE, stdin=PIPE, stderr=None)
     except OSError as e:
-        raise e
+        raise SZExecutableError('cant execute: {}'.format(cmd))
     return p
+
+
+class FileInfo(object):
+    __slots__ = (
+        'date',
+        'time',
+        'attr',
+        'size',
+        'compressed',
+        'name'
+    )
+
+    def __init__(self, date, time, attr, size, compressed, name):
+        self.date = date
+        self.time = time
+        self.attr = attr
+        self.size = size
+        self.compressed = compressed
+        self.name = name.replace('\\', '/')
+        if self.attr[0] == 'D':
+            self.name += '/'
