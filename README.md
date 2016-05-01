@@ -5,6 +5,14 @@ A Plex Media Server channel.
 
 Browse and view locally stored CBZ, CBR, CB7 comic book archives. It currently acts like a file browser, starting at the directory specified in the channels preferences.
 
+Installation
+------------
+
+Download the source zip and put `ComicReader.bundle` into `Plex Media Server/Plug-ins`. [How do I find the Plug-Ins folder?](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-)
+
+Rename the folder to `ComicReader.bundle` if necessary.
+
+
 Format Support
 --------------
 
