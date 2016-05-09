@@ -11,7 +11,6 @@ from updater import Updater
 
 NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
-PAGE_REGEX = re.compile(r'([0-9]+)([a-zA-Z])?\.')
 
 
 def error_message(error, message):
@@ -73,19 +72,16 @@ def get_last_viewed_comic():
 def filtered_listdir(directory):
     """Return a list of only directories and compatible format files in `directory`"""
     return [
-        (x, os.path.isdir(os.path.join(directory, x))) for x in os.listdir(directory) if
+        (x, os.path.isdir(os.path.join(directory, x))) for x in sorted_nicely(os.listdir(directory)) if
         os.path.isdir(os.path.join(directory, x)) or
         os.path.splitext(x)[-1] in SharedCodeService.formats.FORMATS
     ]
 
 
-def filename_page_number(file_list):
-    out = []
-    for file in file_list:
-        num = PAGE_REGEX.search(file)
-        page = int(num.group(1)) if num else None
-        out.append(page)
-    return out
+def sorted_nicely(l):
+    def alphanum_key(key):
+        return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', key.lower())]
+    return sorted(l, key=alphanum_key)
 
 
 def Start():
@@ -151,12 +147,10 @@ def Comic(archive, filename=None):
         Log.Error(e)
         return error_message('bad archive', 'unable to open archive: {}'.format(archive))
     files = a.namelist()
-    page_numbers = filename_page_number(files)
-    Log.Info(sorted(zip(page_numbers, files)))
     if filename is not None:
         pos = files.index(filename)
         files = files[max(0, pos - 3):]
-    for num, f in sorted(zip(page_numbers, files)):
+    for f in sorted_nicely(files):
         if f.endswith('/'):
             continue
         page = f.split('/')[-1] if '/' in f else f
