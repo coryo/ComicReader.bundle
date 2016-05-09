@@ -19,5 +19,18 @@
         "id":    "seven_zip",
         "label": "seven_zip",
         "type":  "text",
+    },
+    {
+        "id":      "page_size",
+        "label":   "page_size",
+        "type":    "enum",
+        "values":  ["10", "20", "30", "40", "50", "75", "100", "150", "200"],
+        "default": "50"
+    },
+    {
+        "id":      "update",
+        "label":   "update",
+        "type":    "bool",
+        "default": true,
     }
 ]

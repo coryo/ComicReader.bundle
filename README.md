@@ -5,6 +5,7 @@ A Plex Media Server channel.
 
 Browse and view locally stored CBZ, CBR, CB7 comic book archives. It currently acts like a file browser, starting at the directory specified in the channels preferences.
 
+
 Format Support
 --------------
 
@@ -47,6 +48,8 @@ Channel Preferences
 -------------------
 
  * **Comics Path:** path to the root directory of where comic archives are stored.
- * **Enable resume feature:** add a 'resume' option to the main menu. This makes an attempt at remembering the last page that was viewed and allowing you to get back easier. Because of the way Plex works this isn't 100% reliable, so this is disabled by default.
+ * **Enable resume feature:** `default: disabled` add a 'resume' option to the main menu. This makes an attempt at remembering the last page that was viewed and allowing you to get back easier. Because of the way Plex works this isn't 100% reliable, so this is disabled by default.
  * **Unrar Executable Path:** path to `unrar` binary. leave blank if `unrar` is in `$PATH`.
  * **7-Zip Executable Path:** path to `7z` binary. leave blank if `7z` is in `$PATH`.
+ * **Items per page:**: `default: 50` number of directories/comics to show per page.
+ * **Enable channel updater:** `default: enabled` disable this if you don't want the channel to check for updates.

@@ -2,5 +2,10 @@
     "cb_path": "Comics Path",
     "resume": "Enable resume feature",
     "unrar": "Unrar Executable Path",
-    "seven_zip": "7zip Executable Path"
+    "seven_zip": "7zip Executable Path",
+    "page_size": "Items per page",
+    "Update available: %s": "Update available: %s",
+    "Install latest version of the channel.": "Install latest version of the channel.",
+    "Channel updated to version %s": "Channel updated to version %s",
+    "update": "Enable channel updater"
 }

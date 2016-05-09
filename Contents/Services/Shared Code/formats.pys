@@ -9,6 +9,7 @@ import stat
 import platform
 import json
 from io import open
+from __builtin__ import type
 
 FORMATS = ['.cbr', '.cbz', '.cb7', '.zip', '.rar', '.7z']
 
@@ -48,7 +49,7 @@ def mime_type(filename):
         '.gif': 'image/gif',
         '.tiff': 'image/tiff',
         '.bmp': 'image/bmp'
-    }[ext]
+    }.get(ext, '*/*')
 
 
 class ArchiveError(Exception):
@@ -76,14 +77,15 @@ def get_archive(archive):
 def get_image(archive, filename, user):
     a = get_archive(archive)
     try:
-        with open(DB_FILE, 'r') as f:
-            db = json.loads(f.read())
-    except Exception:
         db = {}
-    db[user] = [archive, filename]
-    with open(DB_FILE, 'wb') as f:
-        f.write(json.dumps(db))
-    Log.Info(db)
+        with open(DB_FILE) as f:
+            db = json.loads(f.read())
+        db[user] = [archive, filename]
+        with open(DB_FILE, 'wb') as f:
+            f.write(json.dumps(db))
+            Log.Info('wrote db file: {}'.format(db))
+    except Exception as e:
+        Log.Error('db_file: {} {}'.format(DB_FILE, e))
     return DataObject(a.read(filename), mime_type(filename))
 
 
@@ -105,5 +107,3 @@ def get_cover(archive):
         x = sorted([x for x in a.namelist() if not x.endswith('/')])
         if x:
             return DataObject(a.read(x[0]), mime_type(x[0]))
-        else:
-            return None
