@@ -15,16 +15,6 @@ NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
 
 
-def resource_photo_object(title, resource, callback):
-    """callback should be a generated Callback() with a direct response."""
-    po = PhotoObject(key=callback,
-                     rating_key=str(random.random()),
-                     title=title,
-                     thumb=R(resource))
-    po.add(MediaObject(parts=[PartObject(key=callback)]))
-    return po
-
-
 def error_message(error, message):
     Log.Error("ComicReader: {} - {}".format(error, message))
     return MessageContainer(header=unicode(error), message=unicode(message))
@@ -101,8 +91,7 @@ def MarkRead(user, archive):
         Dict.Save()
     except KeyError:
         Log.Error('could not mark read.')
-    with open(os.path.join(Core.bundle_path, 'Contents', 'Resources', 'mark-read.png'), 'rb') as f:
-        return DataObject(f.read(), 'image/png')
+    return error_message('marked', 'marked')
 
 
 @route(PREFIX + '/markunread')
@@ -113,8 +102,7 @@ def MarkUnread(user, archive):
         Dict.Save()
     except Exception:
         Log.Error('could not mark unread.')
-    with open(os.path.join(Core.bundle_path, 'Contents', 'Resources', 'mark-unread.png'), 'rb') as f:
-        return DataObject(f.read(), 'image/png')
+    return error_message('marked', 'marked')
 
 
 ###############################################################################
@@ -154,6 +142,19 @@ def MainMenu():
     return oc
 
 
+def decorate_title(state, title):
+    if state == formats.State.UNREAD:
+        indicator = Prefs['unread_symbol']
+    elif state == formats.State.IN_PROGRESS:
+        try:
+            indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], *Dict['read_states'][user][full_path])
+        except Exception:
+            indicator = Prefs['in_progress_symbol']
+    elif state == formats.State.READ:
+        indicator = Prefs['read_symbol']
+    return '{} {}'.format('' if indicator is None else indicator.strip(), title)
+
+
 @route(PREFIX + '/browse', page_size=int, offset=int)
 def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     oc = ObjectContainer(no_cache=True)
@@ -173,42 +174,42 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
         else:
             state = read(user, full_path)
             title = unicode(os.path.splitext(item)[0])
-            if state == formats.State.UNREAD:
-                indicator = Prefs['unread_symbol']
-            elif state == formats.State.IN_PROGRESS:
-                try:
-                    indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], *Dict['read_states'][user][full_path])
-                except Exception:
-                    indicator = Prefs['in_progress_symbol']
-            elif state == formats.State.READ:
-                indicator = Prefs['read_symbol']
-            title = '{} {}'.format('' if indicator is None else indicator.strip(), title)
-            oc.add(PhotoAlbumObject(
-                key=Callback(Comic, archive=full_path, user=user),
-                rating_key=hashlib.md5(full_path).hexdigest(),
-                title=title,
-                thumb=thumb_transcode(Callback(formats.get_cover,
-                                               archive=full_path))))
+
+            oc.add(DirectoryObject(
+                key=Callback(ComicMenu, archive=full_path, title=title, user=user),
+                title=decorate_title(state, title),
+                thumb=thumb_transcode(Callback(formats.get_cover, archive=full_path))))
+
     if offset + page_size < len(dir_list):
         oc.add(NextPageObject(key=Callback(BrowseDir, cur_dir=cur_dir,
                               page_size=page_size, offset=offset + page_size, user=user)))
     return oc
 
 
+@route(PREFIX + '/comic/menu')
+def ComicMenu(archive, title, user=None):
+    oc = ObjectContainer(title2=unicode(archive), no_cache=True)
+    state = read(user, archive)
+
+    oc.add(PhotoAlbumObject(
+        key=Callback(Comic, archive=archive, user=user),
+        rating_key=hashlib.md5(archive).hexdigest(),
+        title=decorate_title(state, title),
+        thumb=thumb_transcode(Callback(formats.get_cover,
+                                       archive=archive))))
+
+    if state == formats.State.UNREAD or state == formats.State.IN_PROGRESS:
+        oc.add(DirectoryObject(title=L('mark_read'), thumb=R('mark-read.png'),
+                               key=Callback(MarkRead, user=user, archive=archive)))
+    else:
+        oc.add(DirectoryObject(title=L('mark_unread'), thumb=R('mark-unread.png'),
+                               key=Callback(MarkUnread, user=user, archive=archive)))
+    return oc
+
+
 @route(PREFIX + '/comic')
 def Comic(archive, user=None):
     oc = ObjectContainer(title2=unicode(archive), no_cache=True)
-
-    # I cant add a directory object to a photo album and keep the clients working properly
-    # so use a photo and run some extra code in the callback.
-    state = read(user, archive)
-    if state == formats.State.UNREAD or state == formats.State.IN_PROGRESS:
-        oc.add(resource_photo_object(L('mark_read'), 'mark-read.png',
-                                     callback=Callback(MarkRead, user=user, archive=archive)))
-    else:
-        oc.add(resource_photo_object(L('mark_unread'), 'mark-unread.png',
-                                     callback=Callback(MarkUnread, user=user, archive=archive)))
-
     try:
         a = formats.get_archive(archive)
     except formats.ArchiveError as e:
