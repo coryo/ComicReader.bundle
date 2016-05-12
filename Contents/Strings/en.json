@@ -7,5 +7,11 @@
     "Update available: %s": "Update available: %s",
     "Install latest version of the channel.": "Install latest version of the channel.",
     "Channel updated to version %s": "Channel updated to version %s",
-    "update": "Enable channel updater"
+    "update": "Enable channel updater",
+    "read_symbol": "Read Indicator",
+    "unread_symbol": "Unread Indicator",
+    "in_progress_symbol": "In Progress Indicator",
+    "dirs_first": "Show directories on top",
+    "mark_read": "Mark Read",
+    "mark_unread": "Mark Unread"
 }

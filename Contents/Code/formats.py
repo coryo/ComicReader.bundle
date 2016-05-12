@@ -1,43 +1,26 @@
-try:  # import fails from the URL service. this prevents log spam of exceptions.
-    import rarfile
-except Exception:
-    pass
+import os
+import re
+
+import rarfile
 import zipfile
 import szipfile
-import os
-import stat
-import platform
-import json
-from io import open
-from __builtin__ import type
 
 FORMATS = ['.cbr', '.cbz', '.cb7', '.zip', '.rar', '.7z']
-
-# constants https://github.com/Twoure/KissNetwork.bundle/blob/master/Contents/Services/Shared%20Code/domain.pys
-BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'ComicReader.bundle')
-MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Modules')
-SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.comicreader')
-DB_FILE = os.path.join(SUPPORT_PATH, 'db.json')
+SUPPORT_PATH = os.path.join(Core.bundle_path.split('Plug-ins')[0], 'Plug-in Support', 'Data', Plugin.Identifier)
 
 
 def init_rar(path):
+    """Set the unrar executable"""
     if path:
         rarfile.UNRAR_TOOL = os.path.abspath(path)
     Log.Info('USING UNRAR EXECUTABLE: {}'.format(rarfile.UNRAR_TOOL))
 
 
 def init_sz(path):
+    """Set the 7z executable"""
     if path:
         szipfile.SZ_TOOL = os.path.abspath(path)
     Log.Info('USING 7ZIP EXECUTABLE: {}'.format(szipfile.SZ_TOOL))
-
-
-def build_url(archive, file, identifier):
-    return 'comicreader://{}|{}|{}'.format(archive, file, identifier)
-
-
-def split_url(url):
-    return url.split('comicreader://')[-1].split('|')
 
 
 def mime_type(filename):
@@ -52,12 +35,19 @@ def mime_type(filename):
     }.get(ext, '*/*')
 
 
+class State(object):
+    READ = 0
+    UNREAD = 1
+    IN_PROGRESS = 2
+
+
 class ArchiveError(Exception):
     pass
 
 
 def get_archive(archive):
-    """Some archives are given the wrong extension, so try opening it until it works."""
+    """Return an archive object.
+    Some archives are given the wrong extension, so try opening it until it works."""
     try:
         return rarfile.RarFile(archive)
     except Exception:
@@ -75,21 +65,34 @@ def get_archive(archive):
 
 
 def get_image(archive, filename, user):
+    """Return the contents of `filename` from within `archive`. also do some other stuff."""
     a = get_archive(archive)
+
+    # Get Page Numbers
     try:
-        db = {}
-        with open(DB_FILE) as f:
-            db = json.loads(f.read())
-        db[user] = [archive, filename]
-        with open(DB_FILE, 'wb') as f:
-            f.write(json.dumps(db))
-            Log.Info('wrote db file: {}'.format(db))
-    except Exception as e:
-        Log.Error('db_file: {} {}'.format(DB_FILE, e))
+        page_count = len(a.namelist())
+        m = re.search(r'([0-9]+)([a-zA-Z])?\.', filename)
+        cur_page = int(m.group(1)) if m else 0
+        Log.Info('page_count {}/{}'.format(cur_page, page_count))
+    except Exception:
+        Log.Error('get_image: unable to get page numbers')
+    # Write the Dict (read state)
+    try:
+        Dict['read_states'][user][archive] = (cur_page, page_count)#State.IN_PROGRESS if 0 < cur_page <= page_count - 5 else State.READ
+    except Exception:
+        Log.Error('unable to write dict')
+    # Write the resume state.
+    # try:
+    #     Dict['resume_states'][user] = [archive, filename]
+    #     Log.Info('wrote db file: {}'.format(Dict['resume_states']))
+    # except Exception as e:
+    #     Log.Error(str(e))
+    Dict.Save()
     return DataObject(a.read(filename), mime_type(filename))
 
 
 def get_thumb(archive, filename):
+    """Return the contents of `filename` from within `archive`."""
     try:
         a = get_archive(archive)
     except ArchiveError as e:
@@ -99,6 +102,7 @@ def get_thumb(archive, filename):
 
 
 def get_cover(archive):
+    """Return the contents of the first file in `archive`."""
     try:
         a = get_archive(archive)
     except ArchiveError as e:

@@ -5,20 +5,14 @@
         "type":  "text"
     },
     {
-        "id":    "resume",
-        "label": "resume",
-        "type":  "bool",
-        "default": false,
-    },
-    {
         "id":    "unrar",
         "label": "unrar",
-        "type":  "text",
+        "type":  "text"
     },
     {
         "id":    "seven_zip",
         "label": "seven_zip",
-        "type":  "text",
+        "type":  "text"
     },
     {
         "id":      "page_size",
@@ -28,9 +22,33 @@
         "default": "50"
     },
     {
+        "id":      "dirs_first",
+        "label":   "dirs_first",
+        "type":    "bool",
+        "default": false
+    },
+    {
         "id":      "update",
         "label":   "update",
         "type":    "bool",
-        "default": true,
+        "default": true
+    },
+    {
+        "id":      "read_symbol",
+        "label":   "read_symbol",
+        "type":    "text",
+        "default": ""
+    },
+    {
+        "id":      "unread_symbol",
+        "label":   "unread_symbol",
+        "type":    "text",
+        "default": "*"
+    },
+    {
+        "id":      "in_progress_symbol",
+        "label":   "in_progress_symbol",
+        "type":    "text",
+        "default": ">"
     }
 ]

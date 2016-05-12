@@ -3,14 +3,26 @@
 # Supporting CBR, CBZ, CB7
 
 import os
-import json
 import hashlib
+import random
 import re
 from io import open
+
 from updater import Updater
+import formats
 
 NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
+
+
+def resource_photo_object(title, resource, callback):
+    """callback should be a generated Callback() with a direct response."""
+    po = PhotoObject(key=callback,
+                     rating_key=str(random.random()),
+                     title=title,
+                     thumb=R(resource))
+    po.add(MediaObject(parts=[PartObject(key=callback)]))
+    return po
 
 
 def error_message(error, message):
@@ -51,69 +63,99 @@ def get_username(token):
     return token
 
 
-def get_last_viewed_comic():
-    with open(SharedCodeService.formats.DB_FILE, 'r') as f:
-        db = json.loads(f.read())
-        sid = get_session_identifier()
-        Log.Info('Session id: {}'.format(sid))
-        if sid in db:
-            try:
-                archive, filename = db[sid]
-            except:
-                archive, filename, fmt = db[sid]
-            title = archive.split('/')[-1].split('\\')[-1]
-            return PhotoAlbumObject(key=Callback(Comic, archive=archive, filename=filename),
-                                    rating_key=hashlib.sha1(archive).hexdigest(),
-                                    title=u'>> {}: {}'.format(sid, title),
-                                    thumb=thumb_transcode(Callback(SharedCodeService.formats.get_cover,
-                                                                   archive=archive)))
-
-
 def filtered_listdir(directory):
     """Return a list of only directories and compatible format files in `directory`"""
-    return [
-        (x, os.path.isdir(os.path.join(directory, x))) for x in sorted_nicely(os.listdir(directory)) if
-        os.path.isdir(os.path.join(directory, x)) or
-        os.path.splitext(x)[-1] in SharedCodeService.formats.FORMATS
-    ]
+    dirs, comics = [], []
+    for x in sorted_nicely(os.listdir(directory)):
+        if os.path.isdir(os.path.join(directory, x)):
+            if bool(Prefs['dirs_first']):
+                dirs.append((x, True))
+            else:
+                comics.append((x, True))
+        elif os.path.splitext(x)[-1] in formats.FORMATS:
+            comics.append((x, False))
+    return dirs + comics
 
 
 def sorted_nicely(l):
+    """sort file names as you would expect them to be sorted"""
     def alphanum_key(key):
         return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', key.lower())]
     return sorted(l, key=alphanum_key)
 
 
+def read(user, archive):
+    """Return the read state of archive for the session user"""
+    try:
+        cur, total = Dict['read_states'][user][archive]
+        return formats.State.READ if abs(total - cur) < 5 else formats.State.IN_PROGRESS
+    except (KeyError, AttributeError):
+        return formats.State.UNREAD
+
+
+@route(PREFIX + '/markread')
+def MarkRead(user, archive):
+    Log.Info('Mark read. {} a={}'.format(user, archive))
+    try:
+        Dict['read_states'][user][archive] = (0, 0)
+        Dict.Save()
+    except KeyError:
+        Log.Error('could not mark read.')
+    with open(os.path.join(Core.bundle_path, 'Contents', 'Resources', 'mark-read.png'), 'rb') as f:
+        return DataObject(f.read(), 'image/png')
+
+
+@route(PREFIX + '/markunread')
+def MarkUnread(user, archive):
+    Log.Info('Mark unread. a={}'.format(archive))
+    try:
+        del Dict['read_states'][user][archive]
+        Dict.Save()
+    except Exception:
+        Log.Error('could not mark unread.')
+    with open(os.path.join(Core.bundle_path, 'Contents', 'Resources', 'mark-unread.png'), 'rb') as f:
+        return DataObject(f.read(), 'image/png')
+
+
+###############################################################################
+
+
 def Start():
-    Route.Connect(PREFIX + '/getimage', SharedCodeService.formats.get_image)
-    Route.Connect(PREFIX + '/getthumb', SharedCodeService.formats.get_thumb)
-    Route.Connect(PREFIX + '/getcover', SharedCodeService.formats.get_cover)
+    Route.Connect(PREFIX + '/getimage', formats.get_image)
+    Route.Connect(PREFIX + '/getthumb', formats.get_thumb)
+    Route.Connect(PREFIX + '/getcover', formats.get_cover)
     ObjectContainer.title1 = NAME
+
     if 'usernames' not in Dict:
         Dict['usernames'] = {}
+
+    if 'read_states' not in Dict:
+        Dict['read_states'] = {}
+
+    if 'resume_states' not in Dict:
+        Dict['resume_states'] = {}
 
 
 @handler(PREFIX, NAME)
 def MainMenu():
-    SharedCodeService.formats.init_rar(Prefs['unrar'])
-    SharedCodeService.formats.init_sz(Prefs['seven_zip'])
+    formats.init_rar(Prefs['unrar'])
+    formats.init_sz(Prefs['seven_zip'])
+
+    user = get_session_identifier()
+    if user not in Dict['read_states']:
+        Dict['read_states'][user] = {}
 
     oc = ObjectContainer(no_cache=True)
     if bool(Prefs['update']):
         Updater(PREFIX + '/updater', oc)
 
-    if bool(Prefs['resume']) and os.path.isfile(SharedCodeService.formats.DB_FILE):
-        try:
-            oc.add(get_last_viewed_comic())
-        except Exception as e:
-            Log.Error('Unable to add resume comic: {}'.format(e))
-    for x in BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size'])).objects:
+    for x in BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size']), user=user).objects:
         oc.add(x)
     return oc
 
 
 @route(PREFIX + '/browse', page_size=int, offset=int)
-def BrowseDir(cur_dir, page_size=20, offset=0):
+def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     oc = ObjectContainer(no_cache=True)
     try:
         dir_list = filtered_listdir(cur_dir)
@@ -123,40 +165,80 @@ def BrowseDir(cur_dir, page_size=20, offset=0):
         return error_message('bad path', 'bad path')
     for item, is_dir in page:
         full_path = os.path.join(cur_dir, item)
-        oc.add(
-            DirectoryObject(key=Callback(BrowseDir, cur_dir=full_path, page_size=page_size),
-                            title=item) if is_dir else
-            PhotoAlbumObject(key=Callback(Comic, archive=full_path),
-                             rating_key=hashlib.md5(full_path).hexdigest(),
-                             title=unicode(os.path.splitext(item)[0]),
-                             thumb=thumb_transcode(Callback(SharedCodeService.formats.get_cover,
-                                                            archive=full_path)))
-        )
+        if is_dir:
+            oc.add(DirectoryObject(
+                key=Callback(BrowseDir, cur_dir=full_path, page_size=page_size, user=user),
+                title=item,
+                thumb=R('folder.png')))
+        else:
+            state = read(user, full_path)
+            title = unicode(os.path.splitext(item)[0])
+            if state == formats.State.UNREAD:
+                indicator = Prefs['unread_symbol']
+            elif state == formats.State.IN_PROGRESS:
+                try:
+                    indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], *Dict['read_states'][user][full_path])
+                except Exception:
+                    indicator = Prefs['in_progress_symbol']
+            elif state == formats.State.READ:
+                indicator = Prefs['read_symbol']
+            title = '{} {}'.format('' if indicator is None else indicator.strip(), title)
+            oc.add(PhotoAlbumObject(
+                key=Callback(Comic, archive=full_path, user=user),
+                rating_key=hashlib.md5(full_path).hexdigest(),
+                title=title,
+                thumb=thumb_transcode(Callback(formats.get_cover,
+                                               archive=full_path))))
     if offset + page_size < len(dir_list):
         oc.add(NextPageObject(key=Callback(BrowseDir, cur_dir=cur_dir,
-                              page_size=page_size, offset=offset + page_size)))
+                              page_size=page_size, offset=offset + page_size, user=user)))
     return oc
 
 
 @route(PREFIX + '/comic')
-def Comic(archive, filename=None):
+def Comic(archive, user=None):
     oc = ObjectContainer(title2=unicode(archive), no_cache=True)
+
+    # I cant add a directory object to a photo album and keep the clients working properly
+    # so use a photo and run some extra code in the callback.
+    state = read(user, archive)
+    if state == formats.State.UNREAD or state == formats.State.IN_PROGRESS:
+        oc.add(resource_photo_object(L('mark_read'), 'mark-read.png',
+                                     callback=Callback(MarkRead, user=user, archive=archive)))
+    else:
+        oc.add(resource_photo_object(L('mark_unread'), 'mark-unread.png',
+                                     callback=Callback(MarkUnread, user=user, archive=archive)))
+
     try:
-        a = SharedCodeService.formats.get_archive(archive)
-    except SharedCodeService.formats.ArchiveError as e:
+        a = formats.get_archive(archive)
+    except formats.ArchiveError as e:
         Log.Error(e)
         return error_message('bad archive', 'unable to open archive: {}'.format(archive))
     files = a.namelist()
-    if filename is not None:
-        pos = files.index(filename)
-        files = files[max(0, pos - 3):]
+
     for f in sorted_nicely(files):
         if f.endswith('/'):
             continue
         page = f.split('/')[-1] if '/' in f else f
-        oc.add(PhotoObject(url=SharedCodeService.formats.build_url(archive, f, get_session_identifier()),
-                           title=unicode(page) if f != filename else '>> {}'.format(page),
-                           thumb=thumb_transcode(Callback(SharedCodeService.formats.get_thumb,
-                                                          archive=archive,
-                                                          filename=f))))
+        ext = f.split('.')[-1]
+        rating_key = hashlib.sha1('{}{}{}'.format(archive, f, user)).hexdigest()
+        cb = Callback(GetImage, archive=String.Encode(archive), filename=String.Encode(f), user=user, extension=ext)
+        po = PhotoObject(key=Callback(MetadataObject, key=cb, rating_key=rating_key),
+                         rating_key=rating_key,
+                         title=unicode(page),
+                         thumb=thumb_transcode(Callback(formats.get_thumb,
+                                                        archive=archive,
+                                                        filename=f)))
+        po.add(MediaObject(parts=[PartObject(key=cb)]))
+        oc.add(po)
     return oc
+
+
+@route(PREFIX + '/metadata')
+def MetadataObject(key, rating_key):
+    return PhotoObject(key=key, rating_key=rating_key, title='x', summary='x')
+
+
+@route(PREFIX + '/image/{user}/{archive}/{filename}.{extension}')
+def GetImage(archive, filename, user, extension):
+    return formats.get_image(String.Decode(archive), String.Decode(filename), user)
