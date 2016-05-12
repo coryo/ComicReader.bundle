@@ -142,12 +142,12 @@ def MainMenu():
     return oc
 
 
-def decorate_title(state, title):
+def decorate_title(archive, user, state, title):
     if state == formats.State.UNREAD:
         indicator = Prefs['unread_symbol']
     elif state == formats.State.IN_PROGRESS:
         try:
-            indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], *Dict['read_states'][user][full_path])
+            indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], *Dict['read_states'][user][archive])
         except Exception:
             indicator = Prefs['in_progress_symbol']
     elif state == formats.State.READ:
@@ -177,7 +177,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
 
             oc.add(DirectoryObject(
                 key=Callback(ComicMenu, archive=full_path, title=title, user=user),
-                title=decorate_title(state, title),
+                title=decorate_title(full_path, user, state, title),
                 thumb=thumb_transcode(Callback(formats.get_cover, archive=full_path))))
 
     if offset + page_size < len(dir_list):
@@ -194,7 +194,7 @@ def ComicMenu(archive, title, user=None):
     oc.add(PhotoAlbumObject(
         key=Callback(Comic, archive=archive, user=user),
         rating_key=hashlib.md5(archive).hexdigest(),
-        title=decorate_title(state, title),
+        title=decorate_title(archive, user, state, title),
         thumb=thumb_transcode(Callback(formats.get_cover,
                                        archive=archive))))
 
