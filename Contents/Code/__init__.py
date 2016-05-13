@@ -152,7 +152,7 @@ def decorate_title(archive, user, state, title):
             indicator = Prefs['in_progress_symbol']
     elif state == formats.State.READ:
         indicator = Prefs['read_symbol']
-    return '{} {}'.format('' if indicator is None else indicator.strip(), title)
+    return u'{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
 @route(PREFIX + '/browse', page_size=int, offset=int)
