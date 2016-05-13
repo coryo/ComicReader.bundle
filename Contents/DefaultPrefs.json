@@ -22,6 +22,13 @@
         "default": "50"
     },
     {
+        "id":      "resume_length",
+        "label":   "resume_length",
+        "type":    "enum",
+        "values":  ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+        "default": "5"
+    },
+    {
         "id":      "dirs_first",
         "label":   "dirs_first",
         "type":    "bool",

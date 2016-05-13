@@ -1,6 +1,7 @@
 {
     "cb_path": "Comics Path",
-    "resume": "Enable resume feature",
+    "resume": "Resume",
+    "resume_length": "Number of pages to include before resume page",
     "unrar": "Unrar Executable Path",
     "seven_zip": "7zip Executable Path",
     "page_size": "Items per page",

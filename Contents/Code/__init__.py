@@ -83,6 +83,14 @@ def read(user, archive):
         return formats.State.UNREAD
 
 
+def status(user, archive):
+    try:
+        cur, total = Dict['read_states'][user][unicode(archive)]
+        return (int(cur), int(total))
+    except (KeyError, AttributeError):
+        return (0, 0)
+
+
 @route(PREFIX + '/markread')
 def MarkRead(user, archive):
     Log.Info('Mark read. {} a={}'.format(user, archive))
@@ -152,7 +160,7 @@ def decorate_title(archive, user, state, title):
             indicator = Prefs['in_progress_symbol']
     elif state == formats.State.READ:
         indicator = Prefs['read_symbol']
-    return u'{} {}'.format('' if indicator is None else indicator.strip(), title)
+    return '{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
 @route(PREFIX + '/browse', page_size=int, offset=int)
@@ -177,7 +185,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
 
             oc.add(DirectoryObject(
                 key=Callback(ComicMenu, archive=full_path, title=title, user=user),
-                title=decorate_title(full_path, user, state, title),
+                title=unicode(decorate_title(full_path, user, state, title)),
                 thumb=thumb_transcode(Callback(formats.get_cover, archive=full_path))))
 
     if offset + page_size < len(dir_list):
@@ -194,21 +202,24 @@ def ComicMenu(archive, title, user=None):
     oc.add(PhotoAlbumObject(
         key=Callback(Comic, archive=archive, user=user),
         rating_key=hashlib.md5(archive).hexdigest(),
-        title=decorate_title(archive, user, state, title),
+        title=unicode(decorate_title(archive, user, state, title)),
         thumb=thumb_transcode(Callback(formats.get_cover,
                                        archive=archive))))
-
+    if state == formats.State.IN_PROGRESS:
+        cur, total = status(user, archive)
+        oc.add(DirectoryObject(title=unicode(L('resume')), thumb=R('resume.png'),
+                               key=Callback(Comic, archive=archive, user=user, page=cur)))
     if state == formats.State.UNREAD or state == formats.State.IN_PROGRESS:
-        oc.add(DirectoryObject(title=L('mark_read'), thumb=R('mark-read.png'),
+        oc.add(DirectoryObject(title=unicode(L('mark_read')), thumb=R('mark-read.png'),
                                key=Callback(MarkRead, user=user, archive=archive)))
     else:
-        oc.add(DirectoryObject(title=L('mark_unread'), thumb=R('mark-unread.png'),
+        oc.add(DirectoryObject(title=unicode(L('mark_unread')), thumb=R('mark-unread.png'),
                                key=Callback(MarkUnread, user=user, archive=archive)))
     return oc
 
 
-@route(PREFIX + '/comic')
-def Comic(archive, user=None):
+@route(PREFIX + '/comic', page=int)
+def Comic(archive, user=None, page=0):
     oc = ObjectContainer(title2=unicode(archive), no_cache=True)
     try:
         a = formats.get_archive(archive)
@@ -220,13 +231,24 @@ def Comic(archive, user=None):
     for f in sorted_nicely(files):
         if f.endswith('/'):
             continue
-        page = f.split('/')[-1] if '/' in f else f
+        decoration = None
+        if page > 0:
+            m = re.search(r'([0-9]+)([a-zA-Z])?\.', f)
+            if m:
+                page_num = int(m.group(1))
+                if page_num < page - int(Prefs['resume_length']):
+                    continue
+                if page_num == page:
+                    decoration = '>'
+        page_title = f.split('/')[-1] if '/' in f else f
+        if decoration is not None:
+            page_title = '{} {}'.format(decoration, page_title)
         ext = f.split('.')[-1]
         rating_key = hashlib.sha1('{}{}{}'.format(archive, f, user)).hexdigest()
         cb = Callback(GetImage, archive=String.Encode(archive), filename=String.Encode(f), user=user, extension=ext)
         po = PhotoObject(key=Callback(MetadataObject, key=cb, rating_key=rating_key),
                          rating_key=rating_key,
-                         title=unicode(page),
+                         title=unicode(page_title),
                          thumb=thumb_transcode(Callback(formats.get_thumb,
                                                         archive=archive,
                                                         filename=f)))
