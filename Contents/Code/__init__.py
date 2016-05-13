@@ -77,7 +77,7 @@ def sorted_nicely(l):
 def read(user, archive):
     """Return the read state of archive for the session user"""
     try:
-        cur, total = Dict['read_states'][user][archive]
+        cur, total = Dict['read_states'][user][unicode(archive)]
         return formats.State.READ if abs(total - cur) < 5 else formats.State.IN_PROGRESS
     except (KeyError, AttributeError):
         return formats.State.UNREAD
@@ -87,7 +87,7 @@ def read(user, archive):
 def MarkRead(user, archive):
     Log.Info('Mark read. {} a={}'.format(user, archive))
     try:
-        Dict['read_states'][user][archive] = (0, 0)
+        Dict['read_states'][user][unicode(archive)] = (0, 0)
         Dict.Save()
     except KeyError:
         Log.Error('could not mark read.')
@@ -98,7 +98,7 @@ def MarkRead(user, archive):
 def MarkUnread(user, archive):
     Log.Info('Mark unread. a={}'.format(archive))
     try:
-        del Dict['read_states'][user][archive]
+        del Dict['read_states'][user][unicode(archive)]
         Dict.Save()
     except Exception:
         Log.Error('could not mark unread.')

@@ -78,7 +78,7 @@ def get_image(archive, filename, user):
         Log.Error('get_image: unable to get page numbers')
     # Write the Dict (read state)
     try:
-        Dict['read_states'][user][archive] = (cur_page, page_count)#State.IN_PROGRESS if 0 < cur_page <= page_count - 5 else State.READ
+        Dict['read_states'][user][unicode(archive)] = (cur_page, page_count)#State.IN_PROGRESS if 0 < cur_page <= page_count - 5 else State.READ
     except Exception:
         Log.Error('unable to write dict')
     # Write the resume state.
