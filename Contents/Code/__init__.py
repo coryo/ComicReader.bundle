@@ -169,7 +169,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
         if is_dir:
             oc.add(DirectoryObject(
                 key=Callback(BrowseDir, cur_dir=full_path, page_size=page_size, user=user),
-                title=item,
+                title=unicode(item),
                 thumb=R('folder.png')))
         else:
             state = read(user, full_path)
