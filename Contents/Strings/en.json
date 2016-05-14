@@ -14,5 +14,6 @@
     "in_progress_symbol": "In Progress Indicator",
     "dirs_first": "Show directories on top",
     "mark_read": "Mark Read",
-    "mark_unread": "Mark Unread"
+    "mark_unread": "Mark Unread",
+    "prevent_caching": "Prevent client image caching"
 }

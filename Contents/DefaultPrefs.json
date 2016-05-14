@@ -57,5 +57,11 @@
         "label":   "in_progress_symbol",
         "type":    "text",
         "default": ">"
+    },
+    {
+        "id":      "prevent_caching",
+        "label":   "prevent_caching",
+        "type":    "bool",
+        "default": false
     }
 ]
