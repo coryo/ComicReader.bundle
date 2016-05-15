@@ -103,8 +103,9 @@ def ComicMenu(archive, title, user=None):
     # Resume
     if state == formats.State.IN_PROGRESS:
         cur, total = formats.status(user, archive)
-        oc.add(DirectoryObject(title=unicode(L('resume')), thumb=R('resume.png'),
-                               key=Callback(Comic, archive=archive, user=user, page=cur)))
+        oc.add(PhotoAlbumObject(title=unicode(L('resume')), thumb=R('resume.png'),
+                                key=Callback(Comic, archive=archive, user=user, page=cur),
+                                rating_key=hashlib.md5('{}{}'.format(archive, cur)).hexdigest()))
     # Read/Unread toggle
     if state == formats.State.UNREAD or state == formats.State.IN_PROGRESS:
         oc.add(DirectoryObject(title=unicode(L('mark_read')), thumb=R('mark-read.png'),
