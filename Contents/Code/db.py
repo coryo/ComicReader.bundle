@@ -94,6 +94,8 @@ class DictDB(object):
              self.read(user, os.path.join(directory, x)))
             for x, is_dir in utils.filtered_listdir(directory)
         ])
+        if not states:
+            return utils.State.NONE
         return states.pop() if len(states) == 1 else utils.State.IN_PROGRESS
 
 

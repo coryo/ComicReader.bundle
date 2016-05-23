@@ -24,6 +24,7 @@ class State(object):
     READ = 0
     UNREAD = 1
     IN_PROGRESS = 2
+    NONE = 3
 
 
 def get_image(archive, filename, user):
@@ -72,12 +73,12 @@ def decorate_title(archive, user, state, title):
             indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], cur, total)
     elif state == State.READ:
         indicator = Prefs['read_symbol']
+    else:
+        return title
     return '{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
 def decorate_directory(directory, user, title):
-    if not is_series(directory):
-        return title
     state = DATABASE.series_state(user, directory)
     if state == State.UNREAD:
         indicator = Prefs['unread_symbol']
@@ -85,6 +86,8 @@ def decorate_directory(directory, user, title):
         indicator = Prefs['in_progress_symbol']
     elif state == State.READ:
         indicator = Prefs['read_symbol']
+    else:
+        return title
     return '{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
