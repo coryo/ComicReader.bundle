@@ -89,9 +89,11 @@ class DictDB(object):
             Dict.Save()
 
     def series_state(self, user, directory):
-        states = set([self.read(user, os.path.join(directory, x))
-                      for x in os.listdir(directory)
-                      if os.path.splitext(x)[-1] in archives.FORMATS])
+        states = set([
+            (self.series_state(user, os.path.join(directory, x)) if is_dir else
+             self.read(user, os.path.join(directory, x)))
+            for x, is_dir in utils.filtered_listdir(directory)
+        ])
         return states.pop() if len(states) == 1 else utils.State.IN_PROGRESS
 
 
