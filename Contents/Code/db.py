@@ -88,10 +88,18 @@ class DictDB(object):
         else:
             Dict.Save()
 
+    def comic_state(self, user, archive_path, fuzz=5):
+        key = unicode(archive_path)
+        if user not in Dict['read_states'] or key not in Dict['read_states'][user]:
+            return utils.State.NONE
+        else:
+            cur, total = Dict['read_states'][user][key]
+        return utils.State.READ if abs(total - cur) < fuzz else utils.State.IN_PROGRESS
+
     def series_state(self, user, directory):
         states = set([
             (self.series_state(user, os.path.join(directory, x)) if is_dir else
-             self.read(user, os.path.join(directory, x)))
+             self.comic_state(user, os.path.join(directory, x)))
             for x, is_dir in utils.filtered_listdir(directory)
         ])
         if not states:
