@@ -49,15 +49,15 @@ class DictDB(object):
         return user
 
     def get_state(self, user, archive_path):
-        try:
-            cur, total = Dict['read_states'][user][unicode(archive_path)]
-        except (KeyError, AttributeError):
-            return (-1, -1)
+        key = unicode(archive_path)
+        if user not in Dict['read_states'] or key not in Dict['read_states'][user]:
+            cur, total = (-1, -1)
         else:
-            if total <= 0:
-                a = archives.get_archive(archive_path)
-                total = len(a.namelist())
-            return (int(cur), int(total))
+            cur, total = Dict['read_states'][user][key]
+        if total <= 0:
+            a = archives.get_archive(archive_path)
+            total = len(a.namelist())
+        return (int(cur), int(total))
 
     def set_state(self, user, archive_path, page):
         cur_page, total_pages = self.get_state(user, archive_path)
@@ -75,15 +75,10 @@ class DictDB(object):
         return utils.State.READ if abs(total - cur) < fuzz else utils.State.IN_PROGRESS
 
     def mark_read(self, user, archive_path):
-        try:
-            state = self.get_state(user, archive_path)
-        except Exception:
-            new_state = (0, 0)
-        else:
-            new_state = (state[1], state[1])
-        finally:
-            Dict['read_states'][user][unicode(archive_path)] = new_state
-            Dict.Save()
+        state = self.get_state(user, archive_path)
+        new_state = (state[1], state[1])
+        Dict['read_states'][user][unicode(archive_path)] = new_state
+        Dict.Save()
 
     def mark_unread(self, user, archive_path):
         try:
@@ -92,6 +87,12 @@ class DictDB(object):
             Log.Error('could not mark unread. {}'.format(str(e)))
         else:
             Dict.Save()
+
+    def series_state(self, user, directory):
+        states = set([self.read(user, os.path.join(directory, x))
+                      for x in os.listdir(directory)
+                      if os.path.splitext(x)[-1] in archives.FORMATS])
+        return states.pop() if len(states) == 1 else utils.State.IN_PROGRESS
 
 
 DATABASE = DictDB()

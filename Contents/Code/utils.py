@@ -75,6 +75,19 @@ def decorate_title(archive, user, state, title):
     return '{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
+def decorate_directory(directory, user, title):
+    if not is_series(directory):
+        return title
+    state = DATABASE.series_state(user, directory)
+    if state == State.UNREAD:
+        indicator = Prefs['unread_symbol']
+    elif state == State.IN_PROGRESS:
+        indicator = Prefs['in_progress_symbol']
+    elif state == State.READ:
+        indicator = Prefs['read_symbol']
+    return '{} {}'.format('' if indicator is None else indicator.strip(), title)
+
+
 def filtered_listdir(directory):
     """Return a list of only directories and compatible format files in `directory`"""
     dirs, comics = [], []
@@ -92,3 +105,14 @@ def sorted_nicely(l):
     def alphanum_key(key):
         return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', key.lower())]
     return sorted(l, key=alphanum_key)
+
+
+def is_series(directory):
+    """determine if a directory can be considered a series"""
+    try:
+        for x in os.listdir(directory):
+            if os.path.splitext(x)[-1] in archives.FORMATS:
+                return True
+    except Exception as e:
+        return False
+    return False
