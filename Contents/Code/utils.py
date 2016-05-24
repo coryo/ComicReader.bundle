@@ -79,6 +79,8 @@ def decorate_title(archive, user, state, title):
 
 
 def decorate_directory(directory, user, title):
+    if not is_series(directory):
+        return title
     state = DATABASE.series_state(user, directory)
     if state == State.UNREAD:
         indicator = Prefs['unread_symbol']
