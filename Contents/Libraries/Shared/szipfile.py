@@ -21,6 +21,7 @@ is made as :mod:`zipfile`-like as possible.
 
 import sys
 import os
+import locale
 from subprocess import Popen, PIPE
 from binascii import unhexlify
 import re
@@ -41,7 +42,7 @@ class NotSZFile(Exception):
 class SZipFile(object):
 
     def __init__(self, szfile):
-        self.archive = os.path.abspath(szfile)
+        self.archive = szfile
         self._list = None
 
         with open(self.archive, 'rb') as f:
@@ -57,13 +58,15 @@ class SZipFile(object):
 
     def read(self, file):
         """ Return data of file with `7z x -so archive.7z file` """
-        cmd = [SZ_TOOL, 'x', '-so', self.archive, file]
+        arc = self.archive.encode(locale.getpreferredencoding())
+        fname = file.encode(locale.getpreferredencoding())
+        cmd = [SZ_TOOL, 'x', '-sccUTF-8', '-scsUTF-8', '-so', arc, fname]
         p = custom_popen(cmd)
         return p.communicate()[0]
 
     def _get_file_list(self):
         """ get files from `7z l` """
-        p = custom_popen([SZ_TOOL, 'l', self.archive])
+        p = custom_popen([SZ_TOOL, '-sccUTF-8', '-scsUTF-8', 'l', self.archive.encode(locale.getpreferredencoding())])
         out = p.communicate()[0]
         m = re.findall(SZ_L, out)
         self._list = [FileInfo(*x) for x in m if len(x) == 6]
@@ -93,6 +96,6 @@ class FileInfo(object):
         self.attr = attr
         self.size = size
         self.compressed = compressed
-        self.name = name.replace('\\', '/')
+        self.name = name.decode('utf-8')
         if self.attr[0] == 'D':
             self.name += '/'

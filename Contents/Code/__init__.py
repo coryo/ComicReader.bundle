@@ -24,9 +24,9 @@ def error_message(error, message):
 
 
 def Start():
-    Route.Connect(PREFIX + '/getimage', utils.get_image)
-    Route.Connect(PREFIX + '/getthumb', utils.get_thumb)
-    Route.Connect(PREFIX + '/getcover', utils.get_cover)
+    Route.Connect(PREFIX + '/getimage', utils.get_image, archive=unicode)
+    Route.Connect(PREFIX + '/getthumb', utils.get_thumb, archive=unicode)
+    Route.Connect(PREFIX + '/getcover', utils.get_cover, archive=unicode)
     ObjectContainer.title1 = NAME
 
 
@@ -80,7 +80,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     return oc
 
 
-@route(PREFIX + '/comic/menu')
+@route(PREFIX + '/comic/menu', archive=unicode)
 def ComicMenu(archive, title, user=None):
     """The 'main menu' for a comic. this allows for different functions to be added."""
     oc = ObjectContainer(title2=unicode(os.path.basename(archive)), no_cache=True)
@@ -109,7 +109,7 @@ def ComicMenu(archive, title, user=None):
     return oc
 
 
-@route(PREFIX + '/comic', page=int)
+@route(PREFIX + '/comic', archive=unicode, page=int)
 def Comic(archive, user=None, page=0):
     """Return an oc with all pages in archive. if page > 0 return pages [page - Prefs['resume_length']:]"""
     oc = ObjectContainer(title2=unicode(os.path.basename(archive)), no_cache=True)
@@ -119,8 +119,8 @@ def Comic(archive, user=None, page=0):
         Log.Error(e)
         return error_message('bad archive', 'unable to open archive: {}'.format(archive))
     for f in utils.sorted_nicely(a.namelist()):
-        page_title, ext = os.path.splitext(f)
-        if not ext:  # we're flattening the archive structure, so don't list the dirs.
+        page_title, ext = utils.splitext(f)
+        if not ext or ext not in utils.IMAGE_FORMATS:  # we're flattening the archive structure, so don't list the dirs.
             continue
         decoration = None
         if page > 0:
@@ -131,16 +131,25 @@ def Comic(archive, user=None, page=0):
                     continue
                 if page_num <= page:
                     decoration = '>'
-        page_title = os.path.basename(page_title)
+        page_title = utils.basename(page_title)
         if decoration is not None:
             page_title = '{} {}'.format(decoration, page_title)
+
+        if type(page_title) != unicode:
+            try:
+                page_title = page_title.decode('cp437')
+            except Exception:
+                try:
+                    page_title = unicode(page_title, errors='replace')
+                except Exception:
+                    pass
 
         oc.add(CreatePhotoObject(
             media_key=Callback(GetImage, archive=String.Encode(archive),
                                filename=String.Encode(f), user=user, extension=ext.lstrip('.'),
                                time=int(time.time()) if bool(Prefs['prevent_caching']) else 0),
             rating_key=hashlib.sha1('{}{}{}'.format(archive, f, user)).hexdigest(),
-            title=unicode(page_title),
+            title=page_title,
             thumb=utils.thumb_transcode(Callback(utils.get_thumb, archive=archive,
                                                  filename=f))))
     return oc

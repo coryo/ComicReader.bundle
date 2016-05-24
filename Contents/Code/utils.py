@@ -4,12 +4,19 @@ import archives
 from db import DATABASE
 
 IMAGE_FORMATS = ['.jpg', '.png', '.png', '.gif', '.tiff', '.bmp']
-SUPPORT_PATH = os.path.join(Core.bundle_path.split('Plug-ins')[0], 'Plug-in Support', 'Data', Plugin.Identifier)
 PAGE_NUM_REGEX = re.compile(r'([0-9]+)([a-zA-Z])?\.')
 
 
+def splitext(*args, **kwargs):
+    return getattr(os.path, '_splitext')(*args, **kwargs)
+
+
+def basename(*args, **kwargs):
+    return getattr(os.path, '_basename')(*args, **kwargs)
+
+
 def mime_type(filename):
-    ext = os.path.splitext(filename)[-1]
+    ext = splitext(filename)[-1]
     return {
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',
@@ -26,6 +33,13 @@ class State(object):
     IN_PROGRESS = 2
 
 
+def img_data(archive, filename):
+    try:
+        return archive.read(unicode(filename))
+    except UnicodeDecodeError:
+        return archive.read(filename)
+
+
 def get_image(archive, filename, user):
     """Return the contents of `filename` from within `archive`. also do some other stuff."""
     a = archives.get_archive(archive)
@@ -39,21 +53,21 @@ def get_image(archive, filename, user):
     if cur_page > 0:
         DATABASE.set_state(user, archive, cur_page)
 
-    return DataObject(a.read(filename), mime_type(filename))
+    return DataObject(img_data(a, filename), mime_type(filename))
 
 
 def get_thumb(archive, filename):
     """Return the contents of `filename` from within `archive`."""
     a = archives.get_archive(archive)
-    return DataObject(a.read(filename), mime_type(filename))
+    return DataObject(img_data(a, filename), mime_type(filename))
 
 
 def get_cover(archive):
     """Return the contents of the first file in `archive`."""
     a = archives.get_archive(archive)
-    x = sorted([x for x in a.namelist() if os.path.splitext(x)[-1] in IMAGE_FORMATS])
+    x = sorted([x for x in a.namelist() if splitext(x)[-1] in IMAGE_FORMATS])
     if x:
-        return DataObject(a.read(x[0]), mime_type(x[0]))
+        return DataObject(img_data(a, x[0]), mime_type(x[0]))
 
 
 def thumb_transcode(url, w=150, h=150):
@@ -78,8 +92,8 @@ def decorate_title(archive, user, state, title):
 def filtered_listdir(directory):
     """Return a list of only directories and compatible format files in `directory`"""
     dirs, comics = [], []
-    for x in sorted_nicely(os.listdir(directory)):
-        if os.path.isdir(os.path.join(directory, x)):
+    for x in sorted_nicely(os.listdir(directory.encode('utf-8'))):
+        if os.path.isdir(os.path.join(directory.encode('utf-8'), x)):
             l = dirs if bool(Prefs['dirs_first']) else comics
             l.append((x, True))
         elif os.path.splitext(x)[-1] in archives.FORMATS:

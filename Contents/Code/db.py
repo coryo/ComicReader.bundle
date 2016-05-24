@@ -49,15 +49,15 @@ class DictDB(object):
         return user
 
     def get_state(self, user, archive_path):
-        try:
-            cur, total = Dict['read_states'][user][unicode(archive_path)]
-        except (KeyError, AttributeError):
-            return (-1, -1)
+        key = unicode(archive_path)
+        if user not in Dict['read_states'] or key not in Dict['read_states'][user]:
+            cur, total = (-1, -1)
         else:
-            if total <= 0:
-                a = archives.get_archive(archive_path)
-                total = len(a.namelist())
-            return (int(cur), int(total))
+            cur, total = Dict['read_states'][user][key]
+        if total <= 0:
+            a = archives.get_archive(archive_path)
+            total = len([x for x in a.namelist() if utils.splitext(x)[-1] in utils.IMAGE_FORMATS])
+        return (int(cur), int(total))
 
     def set_state(self, user, archive_path, page):
         cur_page, total_pages = self.get_state(user, archive_path)
@@ -75,15 +75,10 @@ class DictDB(object):
         return utils.State.READ if abs(total - cur) < fuzz else utils.State.IN_PROGRESS
 
     def mark_read(self, user, archive_path):
-        try:
-            state = self.get_state(user, archive_path)
-        except Exception:
-            new_state = (0, 0)
-        else:
-            new_state = (state[1], state[1])
-        finally:
-            Dict['read_states'][user][unicode(archive_path)] = new_state
-            Dict.Save()
+        state = self.get_state(user, archive_path)
+        new_state = (state[1], state[1])
+        Dict['read_states'][user][unicode(archive_path)] = new_state
+        Dict.Save()
 
     def mark_unread(self, user, archive_path):
         try:
