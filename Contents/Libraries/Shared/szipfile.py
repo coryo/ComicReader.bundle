@@ -60,7 +60,7 @@ class SZipFile(object):
         """ Return data of file with `7z x -so archive.7z file` """
         arc = self.archive.encode(locale.getpreferredencoding())
         fname = file.encode(locale.getpreferredencoding())
-        cmd = [SZ_TOOL, 'x', '-sccUTF-8', '-scsUTF-8', '-so', arc, fname]
+        cmd = [SZ_TOOL, 'x', '-so', arc, fname]
         p = custom_popen(cmd)
         return p.communicate()[0]
 
@@ -69,6 +69,10 @@ class SZipFile(object):
         p = custom_popen([SZ_TOOL, '-sccUTF-8', '-scsUTF-8', 'l', self.archive.encode(locale.getpreferredencoding())])
         out = p.communicate()[0]
         m = re.findall(SZ_L, out)
+        if not m:
+            p = custom_popen([SZ_TOOL, 'l', self.archive.encode(locale.getpreferredencoding())])
+            out = p.communicate()[0]
+            m = re.findall(SZ_L, out)
         self._list = [FileInfo(*x) for x in m if len(x) == 6]
 
 
