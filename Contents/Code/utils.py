@@ -46,36 +46,6 @@ def img_data(archive, filename):
         return archive.read(filename)
 
 
-def get_image(archive, filename, user):
-    """Return the contents of `filename` from within `archive`. also do some other stuff."""
-    a = archives.get_archive(archive)
-
-    x, total_pages = DATABASE.get_state(user, archive)
-
-    m = PAGE_NUM_REGEX.search(filename)
-    cur_page = int(m.group(1)) if m else 0
-    Log.Info('{}: <{}> ({}/{})'.format(user, os.path.basename(archive), cur_page, total_pages))
-
-    if cur_page > 0:
-        DATABASE.set_state(user, archive, cur_page)
-
-    return DataObject(img_data(a, filename), mime_type(filename))
-
-
-def get_thumb(archive, filename):
-    """Return the contents of `filename` from within `archive`."""
-    a = archives.get_archive(archive)
-    return DataObject(img_data(a, filename), mime_type(filename))
-
-
-def get_cover(archive):
-    """Return the contents of the first file in `archive`."""
-    a = archives.get_archive(archive)
-    x = sorted([x for x in a.namelist() if splitext(x)[-1] in IMAGE_FORMATS])
-    if x:
-        return DataObject(img_data(a, x[0]), mime_type(x[0]))
-
-
 def thumb_transcode(url, w=150, h=150):
     """use the PMS photo transcoder for thumbnails"""
     return '/photo/:/transcode?url={}&height={}&width={}&maxSize=1'.format(String.Quote(url), w, h)

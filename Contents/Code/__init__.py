@@ -23,10 +23,40 @@ def error_message(error, message):
     return MessageContainer(header=unicode(error), message=unicode(message))
 
 
+@route(PREFIX + '/getimage', archive=unicode)
+def get_image(archive, filename, user):
+    """Return the contents of `filename` from within `archive`. also do some other stuff."""
+    a = archives.get_archive(archive)
+
+    x, total_pages = DATABASE.get_state(user, archive)
+
+    m = utils.PAGE_NUM_REGEX.search(filename)
+    cur_page = int(m.group(1)) if m else 0
+    Log.Info('{}: <{}> ({}/{})'.format(user, os.path.basename(archive), cur_page, total_pages))
+
+    if cur_page > 0:
+        DATABASE.set_state(user, archive, cur_page)
+
+    return DataObject(utils.img_data(a, filename), utils.mime_type(filename))
+
+
+@route(PREFIX + '/getthumb', archive=unicode)
+def get_thumb(archive, filename):
+    """Return the contents of `filename` from within `archive`."""
+    a = archives.get_archive(archive)
+    return DataObject(utils.img_data(a, filename), utils.mime_type(filename))
+
+
+@route(PREFIX + '/getcover', archive=unicode)
+def get_cover(archive):
+    """Return the contents of the first file in `archive`."""
+    a = archives.get_archive(archive)
+    x = sorted([x for x in a.namelist() if splitext(x)[-1] in utils.IMAGE_FORMATS])
+    if x:
+        return DataObject(utils.img_data(a, x[0]), utils.mime_type(x[0]))
+
+
 def Start():
-    Route.Connect(PREFIX + '/getimage', utils.get_image, archive=unicode)
-    Route.Connect(PREFIX + '/getthumb', utils.get_thumb, archive=unicode)
-    Route.Connect(PREFIX + '/getcover', utils.get_cover, archive=unicode)
     ObjectContainer.title1 = NAME
 
 
@@ -72,7 +102,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
             oc.add(DirectoryObject(
                 key=Callback(ComicMenu, archive=full_path, title=title, user=user),
                 title=unicode(utils.decorate_title(full_path, user, state, title)),
-                thumb=utils.thumb_transcode(Callback(utils.get_cover, archive=full_path))))
+                thumb=utils.thumb_transcode(Callback(get_cover, archive=full_path))))
 
     if offset + page_size < len(dir_list):
         oc.add(NextPageObject(key=Callback(BrowseDir, cur_dir=cur_dir,
@@ -90,7 +120,7 @@ def ComicMenu(archive, title, user=None):
         key=Callback(Comic, archive=archive, user=user),
         rating_key=hashlib.md5(archive).hexdigest(),
         title=unicode(utils.decorate_title(archive, user, state, title)),
-        thumb=utils.thumb_transcode(Callback(utils.get_cover,
+        thumb=utils.thumb_transcode(Callback(get_cover,
                                              archive=archive))))
     # Resume
     if state == utils.State.IN_PROGRESS:
@@ -150,7 +180,7 @@ def Comic(archive, user=None, page=0):
                                time=int(time.time()) if bool(Prefs['prevent_caching']) else 0),
             rating_key=hashlib.sha1('{}{}{}'.format(archive, f, user)).hexdigest(),
             title=page_title,
-            thumb=utils.thumb_transcode(Callback(utils.get_thumb, archive=archive,
+            thumb=utils.thumb_transcode(Callback(get_thumb, archive=archive,
                                                  filename=f))))
     return oc
 
@@ -184,4 +214,4 @@ def CreatePhotoObject(rating_key, title, thumb, media_key=None):
 def GetImage(archive, filename, user, extension, time=0):
     """direct response with image data. setting a new time value should prevent
     clients from loading their cached copy so our page tracking code can run."""
-    return utils.get_image(String.Decode(archive), String.Decode(filename), user)
+    return get_image(String.Decode(archive), String.Decode(filename), user)
