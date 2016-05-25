@@ -51,7 +51,7 @@ def get_thumb(archive, filename):
 def get_cover(archive):
     """Return the contents of the first file in `archive`."""
     a = archives.get_archive(archive)
-    x = sorted([x for x in a.namelist() if splitext(x)[-1] in utils.IMAGE_FORMATS])
+    x = sorted([x for x in a.namelist() if utils.splitext(x)[-1] in utils.IMAGE_FORMATS])
     if x:
         return DataObject(utils.img_data(a, x[0]), utils.mime_type(x[0]))
 
