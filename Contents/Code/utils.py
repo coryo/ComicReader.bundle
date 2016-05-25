@@ -8,11 +8,17 @@ PAGE_NUM_REGEX = re.compile(r'([0-9]+)([a-zA-Z])?\.')
 
 
 def splitext(*args, **kwargs):
-    return getattr(os.path, '_splitext')(*args, **kwargs)
+    try:
+        return getattr(os.path, '_splitext')(*args, **kwargs)
+    except AttributeError:
+        return os.path.splitext(*args, **kwargs)
 
 
 def basename(*args, **kwargs):
-    return getattr(os.path, '_basename')(*args, **kwargs)
+    try:
+        return getattr(os.path, '_basename')(*args, **kwargs)
+    except AttributeError:
+        return os.path.basename(*args, **kwargs)
 
 
 def mime_type(filename):
