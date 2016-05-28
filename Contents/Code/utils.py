@@ -55,7 +55,7 @@ def decorate_title(archive, user, state, title):
     if state == State.UNREAD:
         indicator = Prefs['unread_symbol']
     elif state == State.IN_PROGRESS:
-        cur, total = DATABASE.get_state(user, archive)
+        cur, total = DATABASE.get_page_state(user, archive)
         if cur <= 0 or total <= 0:
             indicator = Prefs['in_progress_symbol']
         else:
@@ -67,8 +67,7 @@ def decorate_title(archive, user, state, title):
     return '{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
-def decorate_directory(directory, user, title):
-    state = DATABASE.series_state(user, directory)
+def decorate_directory(user, state, title):
     if state == State.UNREAD:
         indicator = Prefs['unread_symbol']
     elif state == State.IN_PROGRESS:

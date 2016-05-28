@@ -28,14 +28,14 @@ def get_image(archive, filename, user):
     """Return the contents of `filename` from within `archive`. also do some other stuff."""
     a = archives.get_archive(archive)
 
-    x, total_pages = DATABASE.get_state(user, archive)
+    x, total_pages = DATABASE.get_page_state(user, archive)
 
     m = utils.PAGE_NUM_REGEX.search(filename)
     cur_page = int(m.group(1)) if m else 0
     Log.Info('{}: <{}> ({}/{})'.format(user, os.path.basename(archive), cur_page, total_pages))
 
     if cur_page > 0:
-        DATABASE.set_state(user, archive, cur_page)
+        DATABASE.set_page_state(user, archive, cur_page)
 
     return DataObject(utils.img_data(a, filename), utils.mime_type(filename))
 
@@ -93,12 +93,13 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     for item, is_dir in page:
         full_path = os.path.join(cur_dir, item)
         if is_dir:
+            state = DATABASE.dir_read_state(user, full_path)
             oc.add(DirectoryObject(
                 key=Callback(BrowseDir, cur_dir=full_path, page_size=page_size, user=user),
-                title=unicode(utils.decorate_directory(full_path, user, item)),
+                title=unicode(utils.decorate_directory(user, state, item)),
                 thumb=R('folder.png')))
         else:
-            state = DATABASE.read(user, full_path)
+            state = DATABASE.comic_read_state(user, full_path)
             title = os.path.splitext(item)[0]
             oc.add(DirectoryObject(
                 key=Callback(ComicMenu, archive=full_path, title=title, user=user),
@@ -117,7 +118,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
 def ComicMenu(archive, title, user=None):
     """The 'main menu' for a comic. this allows for different functions to be added."""
     oc = ObjectContainer(title2=unicode(os.path.basename(archive)), no_cache=True)
-    state = DATABASE.read(user, archive)
+    state = DATABASE.comic_read_state(user, archive)
     # Full comic
     oc.add(PhotoAlbumObject(
         key=Callback(Comic, archive=archive, user=user),
@@ -127,7 +128,7 @@ def ComicMenu(archive, title, user=None):
                                              archive=archive))))
     # Resume
     if state == utils.State.IN_PROGRESS:
-        cur, total = DATABASE.get_state(user, archive)
+        cur, total = DATABASE.get_page_state(user, archive)
         if cur > 0:
             oc.add(PhotoAlbumObject(title=unicode(L('resume')), thumb=R('resume.png'),
                                     key=Callback(Comic, archive=archive, user=user, page=cur),
@@ -153,7 +154,7 @@ def Comic(archive, user=None, page=0):
         return error_message('bad archive', 'unable to open archive: {}'.format(archive))
     for f in utils.sorted_nicely(a.namelist()):
         page_title, ext = utils.splitext(f)
-        if not ext or ext not in utils.IMAGE_FORMATS:  # we're flattening the archive structure, so don't list the dirs.
+        if not ext or ext not in utils.IMAGE_FORMATS:
             continue
         decoration = None
         if page > 0:
