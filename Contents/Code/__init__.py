@@ -82,6 +82,7 @@ def MainMenu():
 @route(PREFIX + '/browse', page_size=int, offset=int)
 def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     """Browse directories, with paging. Show directories and compatible archives."""
+    t1 = time.time()
     oc = ObjectContainer(title2=unicode(os.path.basename(cur_dir)), no_cache=True)
     try:
         dir_list = utils.filtered_listdir(cur_dir)
@@ -94,7 +95,7 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
         if is_dir:
             oc.add(DirectoryObject(
                 key=Callback(BrowseDir, cur_dir=full_path, page_size=page_size, user=user),
-                title=unicode(item),
+                title=unicode(utils.decorate_directory(full_path, user, item)),
                 thumb=R('folder.png')))
         else:
             state = DATABASE.read(user, full_path)
@@ -107,6 +108,8 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     if offset + page_size < len(dir_list):
         oc.add(NextPageObject(key=Callback(BrowseDir, cur_dir=cur_dir,
                               page_size=page_size, offset=offset + page_size, user=user)))
+    t2 = time.time()
+    Log.Info('Directory loaded in {:.0f} ms. {}'.format((t2 - t1) * 1000.0, cur_dir))
     return oc
 
 

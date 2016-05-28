@@ -62,17 +62,33 @@ def decorate_title(archive, user, state, title):
             indicator = '{} [{}/{}]'.format(Prefs['in_progress_symbol'], cur, total)
     elif state == State.READ:
         indicator = Prefs['read_symbol']
+    else:
+        return title
+    return '{} {}'.format('' if indicator is None else indicator.strip(), title)
+
+
+def decorate_directory(directory, user, title):
+    state = DATABASE.series_state(user, directory)
+    if state == State.UNREAD:
+        indicator = Prefs['unread_symbol']
+    elif state == State.IN_PROGRESS:
+        indicator = Prefs['in_progress_symbol']
+    elif state == State.READ:
+        indicator = Prefs['read_symbol']
+    else:
+        return title
     return '{} {}'.format('' if indicator is None else indicator.strip(), title)
 
 
 def filtered_listdir(directory):
     """Return a list of only directories and compatible format files in `directory`"""
     dirs, comics = [], []
-    for x in sorted_nicely(os.listdir(directory.encode('utf-8'))):
-        if os.path.isdir(os.path.join(directory.encode('utf-8'), x)):
+    udir = directory.encode('utf-8')
+    for x in sorted_nicely(os.listdir(udir)):
+        if os.path.isdir(os.path.join(udir, x)):
             l = dirs if bool(Prefs['dirs_first']) else comics
             l.append((x, True))
-        elif os.path.splitext(x)[-1] in archives.FORMATS:
+        elif splitext(x)[-1] in archives.FORMATS:
             comics.append((x, False))
     return dirs + comics
 
@@ -82,3 +98,14 @@ def sorted_nicely(l):
     def alphanum_key(key):
         return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', key.lower())]
     return sorted(l, key=alphanum_key)
+
+
+def is_series(directory):
+    """determine if a directory can be considered a series"""
+    try:
+        for x in os.listdir(directory):
+            if splitext(x)[-1] in archives.FORMATS:
+                return True
+    except Exception as e:
+        return False
+    return False
