@@ -143,9 +143,9 @@ class DictDB(object):
                         Log.Debug('item is in root dir. skipping.')
                     else:
                         state = self.dir_read_state(user, path, True)
-                    return
                 except Exception as e:
                     Log.Error('P_update_tree {}'.format(e))
+                return
 
 
 DATABASE = DictDB()
