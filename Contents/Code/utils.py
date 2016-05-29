@@ -21,9 +21,13 @@ def basename(*args, **kwargs):
         return os.path.basename(*args, **kwargs)
 
 
-def mime_type(filename):
+def data_object(archive, filename):
+    try:
+        img_data = archive.read(unicode(filename))
+    except UnicodeDecodeError:
+        img_data = archive.read(filename)
     ext = splitext(filename)[-1]
-    return {
+    mime_type = {
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',
         '.png': 'image/png',
@@ -31,19 +35,13 @@ def mime_type(filename):
         '.tiff': 'image/tiff',
         '.bmp': 'image/bmp'
     }.get(ext, '*/*')
+    return DataObject(img_data, mime_type)
 
 
 class State(object):
     READ = 0
     UNREAD = 1
     IN_PROGRESS = 2
-
-
-def img_data(archive, filename):
-    try:
-        return archive.read(unicode(filename))
-    except UnicodeDecodeError:
-        return archive.read(filename)
 
 
 def thumb_transcode(url, w=150, h=150):
