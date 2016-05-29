@@ -3,7 +3,7 @@ import re
 import archives
 from db import DATABASE
 
-IMAGE_FORMATS = ['.jpg', '.png', '.png', '.gif', '.tiff', '.bmp']
+IMAGE_FORMATS = ['.jpg', '.jpeg', '.png', '.png', '.gif', '.tiff', '.bmp']
 PAGE_NUM_REGEX = re.compile(r'([0-9]+)([a-zA-Z])?\.')
 
 
