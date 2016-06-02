@@ -10,7 +10,7 @@ def retrieve_username(token):
     access_tokens = XML.ElementFromURL(
         'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
             Core.get_server_attribute('machineIdentifier'), os.environ['PLEXTOKEN']),
-        cacheTime=CACHE_1HOUR)
+        cacheTime=0)
     for child in access_tokens.getchildren():
         if child.get('token') == token:
             username = child.get('username')
@@ -33,6 +33,21 @@ class DictDB(object):
             Dict['usernames'] = {}
         if 'read_states' not in Dict:
             Dict['read_states'] = {}
+        if 'known_usernames' not in Dict:
+            Dict['known_usernames'] = []
+
+    def usernames(self):
+        return set(Dict['usernames'].values() + Dict['known_usernames'])
+
+    def switch_user(self, token, new_username):
+        h = hashlib.sha1(token).hexdigest()
+        Dict['usernames'][h] = new_username
+        Dict.Save()
+
+    def clear_usernames(self):
+        Dict['usernames'] = {}
+        Dict['known_usernames'] = []
+        Dict.Save()
 
     def get_user(self, token):
         """return a username from a plex access token. This will be the key for identifying the user."""
@@ -42,6 +57,8 @@ class DictDB(object):
                 user = Dict['usernames'][h]
             else:
                 Dict['usernames'][h] = retrieve_username(token)
+                if Dict['usernames'][h] not in Dict['known_usernames']:
+                    Dict['known_usernames'].append(Dict['usernames'][h])
                 Dict.Save()
                 user = Dict['usernames'][h]
         except Exception as e:

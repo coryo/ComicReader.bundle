@@ -27,6 +27,31 @@ def Start():
     ObjectContainer.title1 = NAME
 
 
+@route(PREFIX + '/users')
+def Users():
+    oc = ObjectContainer(no_cache=True)
+    for username in DATABASE.usernames():
+        oc.add(DirectoryObject(key=Callback(SwitchUser, new_username=username),
+                               title='Switch to: {}'.format(username),
+                               thumb=R('icon-default.png')))
+
+    oc.add(DirectoryObject(key=Callback(ClearUsers), title='Clear username cache.',
+                           thumb=R('icon-default.png')))
+    return oc
+
+
+@route(PREFIX + '/users/clear')
+def ClearUsers():
+    DATABASE.clear_usernames()
+    return error_message('cleared cache', 'cleared cache')
+
+
+@route(PREFIX + '/users/switch')
+def SwitchUser(new_username):
+    DATABASE.switch_user(Request.Headers.get('X-Plex-Token', 'default'), new_username)
+    return error_message('changed user', 'changed user')
+
+
 @handler(PREFIX, NAME)
 def MainMenu():
     DATABASE.ensure_keys()
@@ -38,8 +63,12 @@ def MainMenu():
     Log.Info('USER: {}'.format(user))
 
     oc = ObjectContainer(title2=unicode(user), no_cache=True)
+
     if bool(Prefs['update']):
         Updater(PREFIX + '/updater', oc)
+
+    oc.add(DirectoryObject(key=Callback(Users), title='Hello {}. Switch User?'.format(user),
+                           thumb=R('icon-default.png')))
 
     for x in BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size']), user=user).objects:
         oc.add(x)
