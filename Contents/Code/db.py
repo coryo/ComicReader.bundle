@@ -37,7 +37,7 @@ class DictDB(object):
             Dict['known_usernames'] = []
 
     def usernames(self):
-        return set(Dict['usernames'].values() + Dict['known_usernames'])
+        return set(Dict['usernames'].values() + Dict['known_usernames'] + Dict['read_states'].keys())
 
     def switch_user(self, token, new_username):
         h = hashlib.sha1(token).hexdigest()
