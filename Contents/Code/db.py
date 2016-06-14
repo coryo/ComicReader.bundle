@@ -4,6 +4,7 @@ import utils
 import archives
 import difflib
 
+DEFAULT_USER = 'default_user'
 
 def retrieve_username(token):
     """retrieve the username for the given access token from plex.tv"""
@@ -16,7 +17,7 @@ def retrieve_username(token):
             username = child.get('username')
             return username if username else child.get('title')
     # couldn't get a username, use a default name
-    return 'default_user'
+    return DEFAULT_USER
 
 
 class DictDB(object):
@@ -44,7 +45,7 @@ class DictDB(object):
         })
 
     def usernames(self):
-        return set(Dict['usernames'].values() + Dict['known_usernames'] + Dict['read_states'].keys())
+        return set([DEFAULT_USER] + Dict['usernames'].values() + Dict['known_usernames'])
 
     def switch_user(self, token, new_username):
         h = hashlib.sha1(token).hexdigest()
