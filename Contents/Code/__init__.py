@@ -27,6 +27,16 @@ def Start():
     ObjectContainer.title1 = NAME
 
 
+@route(PREFIX + '/db')
+def Db():
+    return utils.JSONResponse(DATABASE.dumps())
+
+
+@route(PREFIX + '/db/clean')
+def DbClean():
+    return utils.JSONResponse(JSON.StringFromObject(DATABASE.clean_states()))
+
+
 @route(PREFIX + '/users')
 def Users():
     oc = ObjectContainer(no_cache=True)

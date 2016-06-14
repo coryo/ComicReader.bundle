@@ -106,3 +106,10 @@ def is_series(directory):
     except Exception as e:
         return False
     return False
+
+
+def JSONResponse(json):
+    return DataObject("""<pre id="json"></pre>
+        <script>
+            document.getElementById("json").innerHTML = JSON.stringify({}, undefined, 2);
+        </script>""".format(json), 'text/html; charset=utf-8')

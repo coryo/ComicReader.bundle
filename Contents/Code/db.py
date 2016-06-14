@@ -15,8 +15,8 @@ def retrieve_username(token):
         if child.get('token') == token:
             username = child.get('username')
             return username if username else child.get('title')
-    # couldn't get a username, use hash of the token.
-    return hashlib.sha1(token).hexdigest()
+    # couldn't get a username, use a default name
+    return 'default_user'
 
 
 class DictDB(object):
@@ -36,6 +36,13 @@ class DictDB(object):
         if 'known_usernames' not in Dict:
             Dict['known_usernames'] = []
 
+    def dumps(self):
+        return JSON.StringFromObject({
+            'users': self.usernames(),
+            'read_states': {k: {unicode(kk): vv for kk, vv in v.iteritems()}
+                            for k, v in Dict['read_states'].iteritems()}
+        })
+
     def usernames(self):
         return set(Dict['usernames'].values() + Dict['known_usernames'] + Dict['read_states'].keys())
 
@@ -48,6 +55,20 @@ class DictDB(object):
         Dict['usernames'] = {}
         Dict['known_usernames'] = []
         Dict.Save()
+
+    def clean_states(self):
+        x = []
+        read_states = Dict['read_states']
+        for user in read_states.keys():
+            user_data = read_states[user]
+            for full_path in user_data.keys():
+                if not os.path.exists(os.path.abspath(full_path)):
+                    x.append(full_path)
+                    del user_data[full_path]
+            read_states[user] = user_data
+        Dict['read_states'] = read_states
+        Dict.Save()
+        return x
 
     def get_user(self, token):
         """return a username from a plex access token. This will be the key for identifying the user."""
