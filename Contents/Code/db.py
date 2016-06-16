@@ -6,11 +6,16 @@ import difflib
 
 DEFAULT_USER = 'default_user'
 
+
 def retrieve_username(token):
     """retrieve the username for the given access token from plex.tv"""
+    try:
+        req_token = os.environ['PLEXTOKEN']
+    except Exception:
+        req_token = token
     access_tokens = XML.ElementFromURL(
         'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
-            Core.get_server_attribute('machineIdentifier'), os.environ['PLEXTOKEN']),
+            Core.get_server_attribute('machineIdentifier'), req_token),
         cacheTime=0)
     for child in access_tokens.getchildren():
         if child.get('token') == token:
