@@ -13,7 +13,7 @@ def retrieve_username(access_token):
         try:
             req_token = os.environ['PLEXTOKEN']
         except Exception as e:
-            Log.Error('no plex token in environ. {}'.format(e))
+            Log.Error('retrieve_username: no plex token in environ. {}'.format(e))
             req_token = token
         access_tokens = XML.ElementFromURL(
             'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
@@ -31,6 +31,7 @@ def retrieve_username(access_token):
 
     username = username_for_token(access_token)
     if username == DEFAULT_USER:
+        Log.Debug('retrieve_username: len(Dict["_tokens"]) = {}'.format(len(Dict['_tokens'])))
         for t in Dict['_tokens']:
             username = username_for_token(t)
             if username != DEFAULT_USER:
