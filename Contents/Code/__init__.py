@@ -12,7 +12,7 @@ from io import open
 from updater import Updater
 import utils
 import archives
-from db import DATABASE
+from db import DATABASE, test_token
 
 NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
@@ -73,6 +73,7 @@ def SwitchUser(new_username):
 @handler(PREFIX, NAME)
 def MainMenu():
     DATABASE.ensure_keys()
+    Log.Debug('test_token: {}'.format(test_token(Request.Headers.get('X-Plex-Token'))))
 
     archives.init_rar(Prefs['unrar'])
     archives.init_sz(Prefs['seven_zip'])

@@ -7,40 +7,61 @@ import difflib
 DEFAULT_USER = 'default_user'
 
 
+def test_token(token):
+    t = access_tokens(token, cache_time=CACHE_1HOUR * 6)
+    return True if t is not None else False
+
+
+def access_tokens(req_token, cache_time=0):
+    try:
+        t = XML.ElementFromURL(
+            'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
+                Core.get_server_attribute('machineIdentifier'), req_token),
+            cacheTime=cache_time)
+        if req_token not in Dict['_tokens']:
+            Dict['_tokens'].append(req_token)
+            Dict.Save()
+        return t
+    except Exception as e:
+        Log.Error('access_tokens: {}'.format(e))
+        if req_token in Dict['_tokens']:
+            Dict['_tokens'].remove(req_token)
+            Dict.Save()
+        return None
+
+
+def username_for_token(token):
+    """return either a username or DEFAULT_USER"""
+    try:
+        # some servers don't have this environment variable set.
+        req_token = os.environ['PLEXTOKEN']
+    except Exception as e:
+        Log.Error('retrieve_username: no plex token in environ. {}'.format(e))
+        req_token = token
+
+    tokens = access_tokens(req_token)
+    if tokens is None:
+        return DEFAULT_USER
+
+    try:
+        username = ''
+        for child in tokens.getchildren():
+            if child.get('token') == token:
+                # this is the user. 'username' is for real users, 'title' is for plexhome users.
+                username = child.get('username') if child.get('username') else child.get('title')
+            if child.get('owned') == '1':
+                # store tokens with the servers device name, so we can use these when PLEXTOKEN isnt in os.environ.
+                t = child.get('token')
+                if t not in Dict['_tokens']:
+                    Dict['_tokens'].append(t)
+        return username if username else DEFAULT_USER
+    except Exception as e:
+        Log.Error('retrieve_username: failed parsing xml: {}'.format(e))
+        return DEFAULT_USER
+
+
 def retrieve_username(access_token):
     """retrieve the username for the given access token from plex.tv"""
-    def username_for_token(token):
-        """return either a username or DEFAULT_USER"""
-        try:
-            # some servers don't have this environment variable set.
-            req_token = os.environ['PLEXTOKEN']
-        except Exception as e:
-            Log.Error('retrieve_username: no plex token in environ. {}'.format(e))
-            req_token = token
-        try:
-            access_tokens = XML.ElementFromURL(
-                'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
-                    Core.get_server_attribute('machineIdentifier'), req_token),
-                cacheTime=0)
-        except Exception as e:
-            Log.Error('retrieve_username: failed getting access_tokens.xml: {}'.format(e))
-            return DEFAULT_USER
-        try:
-            username = ''
-            for child in access_tokens.getchildren():
-                if child.get('token') == token:
-                    # this is the user. 'username' is for real users, 'title' is for plexhome users.
-                    username = child.get('username') if child.get('username') else child.get('title')
-                if 'PLEXTOKEN' not in os.environ and child.get('device') == Core.get_server_attribute('friendlyName'):
-                    # store tokens with the servers device name, so we can use these when PLEXTOKEN isnt in os.environ.
-                    t = child.get('token')
-                    if t not in Dict['_tokens']:
-                        Dict['_tokens'].append(t)
-            return username if username else DEFAULT_USER
-        except Exception as e:
-            Log.Error('retrieve_username: failed parsing xml: {}'.format(e))
-            return DEFAULT_USER
-
     username = username_for_token(access_token)
     if username == DEFAULT_USER:
         Log.Debug('retrieve_username: len(Dict["_tokens"]) = {}'.format(len(Dict['_tokens'])))
