@@ -72,7 +72,7 @@ class DictDB(object):
 
     def dumps(self):
         return JSON.StringFromObject({
-            'users': self.usernames(),
+            'users': list(self.usernames()),
             'read_states': {k: {unicode(kk): vv for kk, vv in v.iteritems()}
                             for k, v in Dict['read_states'].iteritems()}
         })
@@ -187,16 +187,17 @@ class DictDB(object):
         states = set()
         dir_state = None
         for x, is_dir in utils.filtered_listdir(directory):
+            Log.Info(x)
             state = (self.dir_read_state(user, os.path.join(directory, x), force) if is_dir else
                      self.comic_read_state(user, os.path.join(directory, x)))
             states.add(state)
-            if len(states) > 1:
-                dir_state = utils.State.IN_PROGRESS
-                break
         if not states:
             dir_state = utils.State.UNREAD
-        elif dir_state is None:
-            dir_state = states.pop()
+        else:
+            if len(states) == 1:
+                dir_state = states.pop()
+            else:
+                dir_state = utils.State.IN_PROGRESS
 
         Dict['read_states'][user][directory] = dir_state
         return dir_state
