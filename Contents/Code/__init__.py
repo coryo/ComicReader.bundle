@@ -47,7 +47,15 @@ def Users():
 
     oc.add(DirectoryObject(key=Callback(ClearUsers), title='Clear username cache.',
                            thumb=R('icon-default.png')))
+    oc.add(DirectoryObject(key=Callback(RefreshUser), title='Refresh User.',
+                           thumb=R('icon-default.png')))
     return oc
+
+
+@route(PREFIX + '/users/refresh')
+def RefreshUser():
+    DATABASE.get_user(Request.Headers.get('X-Plex-Token', 'default'), force=True)
+    return error_message('refreshed user', 'refreshed user')
 
 
 @route(PREFIX + '/users/clear')

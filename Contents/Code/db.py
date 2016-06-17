@@ -7,22 +7,35 @@ import difflib
 DEFAULT_USER = 'default_user'
 
 
-def retrieve_username(token):
+def retrieve_username(access_token):
     """retrieve the username for the given access token from plex.tv"""
-    try:
-        req_token = os.environ['PLEXTOKEN']
-    except Exception:
-        req_token = token
-    access_tokens = XML.ElementFromURL(
-        'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
-            Core.get_server_attribute('machineIdentifier'), req_token),
-        cacheTime=0)
-    for child in access_tokens.getchildren():
-        if child.get('token') == token:
-            username = child.get('username')
-            return username if username else child.get('title')
-    # couldn't get a username, use a default name
-    return DEFAULT_USER
+    def username_for_token(token):
+        try:
+            req_token = os.environ['PLEXTOKEN']
+        except Exception as e:
+            Log.Error('no plex token in environ. {}'.format(e))
+            req_token = token
+        access_tokens = XML.ElementFromURL(
+            'https://plex.tv/servers/{}/access_tokens.xml?auth_token={}'.format(
+                Core.get_server_attribute('machineIdentifier'), req_token),
+            cacheTime=0)
+        username = ''
+        for child in access_tokens.getchildren():
+            if child.get('token') == token:
+                username = child.get('username') if child.get('username') else child.get('title')
+            if 'PLEXTOKEN' not in os.environ and child.get('device') == Core.get_server_attribute('friendlyName'):
+                t = child.get('token')
+                if t not in Dict['_tokens']:
+                    Dict['_tokens'].append(t)
+        return username if username else DEFAULT_USER
+
+    username = username_for_token(access_token)
+    if username == DEFAULT_USER:
+        for t in Dict['_tokens']:
+            username = username_for_token(t)
+            if username != DEFAULT_USER:
+                break
+    return username
 
 
 class DictDB(object):
@@ -41,6 +54,8 @@ class DictDB(object):
             Dict['read_states'] = {}
         if 'known_usernames' not in Dict:
             Dict['known_usernames'] = []
+        if '_tokens' not in Dict:
+            Dict['_tokens'] = []
 
     def dumps(self):
         return JSON.StringFromObject({
@@ -76,13 +91,15 @@ class DictDB(object):
         Dict.Save()
         return x
 
-    def get_user(self, token):
+    def get_user(self, token, force=False):
         """return a username from a plex access token. This will be the key for identifying the user."""
         h = hashlib.sha1(token).hexdigest()
         try:
-            if h in Dict['usernames']:
+            if h in Dict['usernames'] and not force:
+                Log.Debug('get_user: using cached username.')
                 user = Dict['usernames'][h]
             else:
+                Log.Debug('get_user: retrieving username from plex.tv.')
                 Dict['usernames'][h] = retrieve_username(token)
                 if Dict['usernames'][h] not in Dict['known_usernames']:
                     Dict['known_usernames'].append(Dict['usernames'][h])
