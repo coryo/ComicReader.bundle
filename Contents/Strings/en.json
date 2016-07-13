@@ -15,5 +15,12 @@
     "dirs_first": "Show directories on top",
     "mark_read": "Mark Read",
     "mark_unread": "Mark Unread",
-    "prevent_caching": "Prevent client image caching"
+    "prevent_caching": "Prevent client image caching",
+    "sort": "Sort Files By",
+    "name asc": "A-Z",
+    "name desc": "Z-A",
+    "ctime asc": "Old to New (created)",
+    "mtime asc": "Old to New (modified)",
+    "ctime desc": "New to Old (created)",
+    "mtime desc": "New to Old (modified)"
 }

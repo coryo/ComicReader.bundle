@@ -63,5 +63,12 @@
         "label":   "prevent_caching",
         "type":    "bool",
         "default": false
+    },
+    {
+        "id":      "sort",
+        "label":   "sort",
+        "type":    "enum",
+        "values":  ["name asc", "name desc", "ctime asc", "mtime asc", "ctime desc", "mtime desc"],
+        "default": "name asc"
     }
 ]
