@@ -12,7 +12,7 @@ from io import open
 from updater import Updater
 import utils
 import archives
-from db import DATABASE
+from db import DATABASE, test_token
 
 NAME = 'ComicReader'
 PREFIX = '/photos/comicreader'
@@ -27,9 +27,53 @@ def Start():
     ObjectContainer.title1 = NAME
 
 
+@route(PREFIX + '/db')
+def Db():
+    return utils.JSONResponse(DATABASE.dumps())
+
+
+@route(PREFIX + '/db/clean')
+def DbClean():
+    return utils.JSONResponse(JSON.StringFromObject(DATABASE.clean_states()))
+
+
+@route(PREFIX + '/users')
+def Users():
+    oc = ObjectContainer(no_cache=True)
+    for username in DATABASE.usernames():
+        oc.add(DirectoryObject(key=Callback(SwitchUser, new_username=username),
+                               title='Switch to: {}'.format(username),
+                               thumb=R('icon-default.png')))
+
+    oc.add(DirectoryObject(key=Callback(ClearUsers), title='Clear username cache.',
+                           thumb=R('icon-default.png')))
+    oc.add(DirectoryObject(key=Callback(RefreshUser), title='Refresh User.',
+                           thumb=R('icon-default.png')))
+    return oc
+
+
+@route(PREFIX + '/users/refresh')
+def RefreshUser():
+    DATABASE.get_user(Request.Headers.get('X-Plex-Token', 'default'), force=True)
+    return error_message('refreshed user', 'refreshed user')
+
+
+@route(PREFIX + '/users/clear')
+def ClearUsers():
+    DATABASE.clear_usernames()
+    return error_message('cleared cache', 'cleared cache')
+
+
+@route(PREFIX + '/users/switch')
+def SwitchUser(new_username):
+    DATABASE.switch_user(Request.Headers.get('X-Plex-Token', 'default'), new_username)
+    return error_message('changed user', 'changed user')
+
+
 @handler(PREFIX, NAME)
 def MainMenu():
     DATABASE.ensure_keys()
+    Log.Debug('test_token: {}'.format(test_token(Request.Headers.get('X-Plex-Token'))))
 
     archives.init_rar(Prefs['unrar'])
     archives.init_sz(Prefs['seven_zip'])
@@ -38,10 +82,17 @@ def MainMenu():
     Log.Info('USER: {}'.format(user))
 
     oc = ObjectContainer(title2=unicode(user), no_cache=True)
+
     if bool(Prefs['update']):
         Updater(PREFIX + '/updater', oc)
 
-    for x in BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size']), user=user).objects:
+    oc.add(DirectoryObject(key=Callback(Users), title='Hello {}. Switch User?'.format(user),
+                           thumb=R('icon-default.png')))
+
+    browse_dir = BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size']), user=user)
+    if not hasattr(browse_dir, 'objects'):
+        return browse_dir
+    for x in browse_dir.objects:
         oc.add(x)
     return oc
 
@@ -55,7 +106,9 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
         dir_list = utils.filtered_listdir(cur_dir)
         page = dir_list[offset:offset + page_size]
     except Exception as e:
-        Log.Error(e)
+        Log.Error('BrowseDir: failed to get directory listing.')
+        Log.Error('BrowseDir: {}, cur_dir={}, page_size={}, offset={}, user={}'.format(
+            e, cur_dir, page_size, offset, user))
         return error_message('bad path', 'bad path')
     for item, is_dir in page:
         full_path = os.path.join(cur_dir, item)
