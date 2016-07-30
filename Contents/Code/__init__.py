@@ -89,7 +89,10 @@ def MainMenu():
     oc.add(DirectoryObject(key=Callback(Users), title='Hello {}. Switch User?'.format(user),
                            thumb=R('icon-default.png')))
 
-    for x in BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size']), user=user).objects:
+    browse_dir = BrowseDir(Prefs['cb_path'], page_size=int(Prefs['page_size']), user=user)
+    if not hasattr(browse_dir, 'objects'):
+        return browse_dir
+    for x in browse_dir.objects:
         oc.add(x)
     return oc
 
@@ -103,7 +106,9 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
         dir_list = utils.filtered_listdir(cur_dir)
         page = dir_list[offset:offset + page_size]
     except Exception as e:
-        Log.Error(e)
+        Log.Error('BrowseDir: failed to get directory listing.')
+        Log.Error('BrowseDir: {}, cur_dir={}, page_size={}, offset={}, user={}'.format(
+            e, cur_dir, page_size, offset, user))
         return error_message('bad path', 'bad path')
     for item, is_dir in page:
         full_path = os.path.join(cur_dir, item)
