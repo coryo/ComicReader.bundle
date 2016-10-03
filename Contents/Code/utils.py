@@ -95,6 +95,8 @@ def filtered_listdir(directory):
     else:
         files = sorted_nicely(os.listdir(udir))
     for x in files:
+        if x.startswith('.') or x == 'lost+found':
+            continue
         if os.path.isdir(os.path.join(udir, x)):
             l = dirs if bool(Prefs['dirs_first']) else comics
             l.append((x, True))
