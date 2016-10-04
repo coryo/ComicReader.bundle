@@ -180,6 +180,22 @@ class DictDB(object):
         self.P_update_tree(user, archive_path)
         Dict.Save()
 
+    def mark_read_dir(self, user, path):
+        for item, is_dir in utils.filtered_listdir(path):
+            full_path = os.path.join(path, item)
+            if is_dir:
+                self.mark_read_dir(user, full_path)
+            else:
+                self.mark_read(user, full_path)
+                
+    def mark_unread_dir(self, user, path):
+        for item, is_dir in utils.filtered_listdir(path):
+            full_path = os.path.join(path, item)
+            if is_dir:
+                self.mark_unread_dir(user, full_path)
+            else:
+                self.mark_unread(user, full_path)        
+
     def mark_unread(self, user, archive_path):
         """mark an archive as unread for user. (remove it from the database)."""
         try:

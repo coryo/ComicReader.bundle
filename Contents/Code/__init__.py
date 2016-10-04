@@ -110,6 +110,13 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
         Log.Error('BrowseDir: {}, cur_dir={}, page_size={}, offset={}, user={}'.format(
             e, cur_dir, page_size, offset, user))
         return error_message('bad path', 'bad path')
+
+    # Read/Unread toggle
+    if os.path.abspath(cur_dir) != os.path.abspath(Prefs['cb_path']):
+        oc.add(DirectoryObject(title=unicode(L('mark_all_read')), thumb=R('mark-read.png'),
+                                key=Callback(MarkReadDir, user=user, path=cur_dir)))
+        oc.add(DirectoryObject(title=unicode(L('mark_all_unread')), thumb=R('mark-unread.png'),
+                                key=Callback(MarkUnreadDir, user=user, path=cur_dir)))        
     for item, is_dir in page:
         full_path = os.path.join(cur_dir, item)
         if is_dir:
@@ -219,6 +226,19 @@ def MarkRead(user, archive_path):
 def MarkUnread(user, archive_path):
     Log.Info('Mark unread. a={}'.format(archive_path))
     DATABASE.mark_unread(user, archive_path)
+    return error_message('marked', 'marked')
+
+@route(PREFIX + '/markreaddir')
+def MarkReadDir(user, path):
+    Log.Info('Mark read. {} a={}'.format(user, path))
+    DATABASE.mark_read_dir(user, path)
+    return error_message('marked', 'marked')
+
+
+@route(PREFIX + '/markunreaddir')
+def MarkUnreadDir(user, path):
+    Log.Info('Mark unread. a={}'.format(path))
+    DATABASE.mark_unread_dir(user, path)
     return error_message('marked', 'marked')
 
 
