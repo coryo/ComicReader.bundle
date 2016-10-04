@@ -153,9 +153,13 @@ class DictDB(object):
             cur, total = (-1, -1)
         else:
             cur, total = Dict['read_states'][user][key]
-        if total <= 0:
-            a = archives.get_archive(archive_path)
-            total = len([x for x in a.namelist() if utils.splitext(x)[-1] in utils.IMAGE_FORMATS])
+        if total <= 0 or total == 1:
+            try:
+                a = archives.get_archive(archive_path)
+            except archives.ArchiveError:
+                total = 1
+            else:
+                total = len([x for x in a.namelist() if utils.splitext(x)[-1] in utils.IMAGE_FORMATS])
         return (int(cur), int(total))
 
     def set_page_state(self, user, archive_path, page):

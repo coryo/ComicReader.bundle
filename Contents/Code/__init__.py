@@ -8,6 +8,7 @@ import random
 import re
 import time
 from io import open
+from __builtin__ import globals
 
 from updater import Updater
 import utils
@@ -114,9 +115,9 @@ def BrowseDir(cur_dir, page_size=20, offset=0, user=None):
     # Read/Unread toggle
     if os.path.abspath(cur_dir) != os.path.abspath(Prefs['cb_path']):
         oc.add(DirectoryObject(title=unicode(L('mark_all_read')), thumb=R('mark-read.png'),
-                                key=Callback(MarkReadDir, user=user, path=cur_dir)))
+                                key=Callback(Confirmation, f='MarkReadDir', action=L('mark_all_read'), user=user, path=cur_dir)))
         oc.add(DirectoryObject(title=unicode(L('mark_all_unread')), thumb=R('mark-unread.png'),
-                                key=Callback(MarkUnreadDir, user=user, path=cur_dir)))        
+                                key=Callback(Confirmation, f='MarkUnreadDir', action=L('mark_all_unread'), user=user, path=cur_dir)))        
     for item, is_dir in page:
         full_path = os.path.join(cur_dir, item)
         if is_dir:
@@ -240,6 +241,14 @@ def MarkUnreadDir(user, path):
     Log.Info('Mark unread. a={}'.format(path))
     DATABASE.mark_unread_dir(user, path)
     return error_message('marked', 'marked')
+
+@route(PREFIX + '/confirm')
+def Confirmation(f, action, **kwargs):
+    function = globals()[f]
+    oc = ObjectContainer(title2=action)
+    oc.add(DirectoryObject(title=unicode('{} {}'.format(L('confirm'), action)), thumb=R('icon-default.png'),
+                           key=Callback(function, **kwargs)))
+    return oc
 
 
 @route(PREFIX + '/createphotoobject')
