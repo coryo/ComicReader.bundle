@@ -1,6 +1,8 @@
 ComicReader
 ===========
 
+[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=babylonstudio%40gmail%2ecom&lc=CA&item_name=coryo%20Plex%20Channels&no_note=0&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHostedGuest) btc: 1JJD5i4jL5qmbMKCy1sNVGgQzx1Jh37rFH
+
 A Plex Media Server channel.
 
 Browse and view locally stored CBZ, CBR, CB7 comic book archives. It currently acts like a file browser, starting at the directory specified in the channels preferences.
