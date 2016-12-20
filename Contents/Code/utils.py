@@ -26,7 +26,7 @@ def data_object(archive, filename):
         img_data = archive.read(unicode(filename))
     except UnicodeDecodeError:
         img_data = archive.read(filename)
-    ext = splitext(filename)[-1]
+    ext = splitext(filename)[-1].lower()
     mime_type = {
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',

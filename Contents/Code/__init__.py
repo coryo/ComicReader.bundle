@@ -181,7 +181,7 @@ def Comic(archive_path, user=None, page=0):
         return error_message('bad archive', 'unable to open archive: {}'.format(archive_path))
     for f in utils.sorted_nicely(archive.namelist()):
         page_title, ext = utils.splitext(f)
-        if not ext or ext not in utils.IMAGE_FORMATS:
+        if not ext or ext.lower() not in utils.IMAGE_FORMATS:
             continue
         decoration = None
         if page > 0:
@@ -297,6 +297,6 @@ def get_thumb(archive_path, filename):
 def get_cover(archive_path):
     """Return the contents of the first file in `archive_path`."""
     archive = archives.get_archive(archive_path)
-    x = sorted([x for x in archive.namelist() if utils.splitext(x)[-1] in utils.IMAGE_FORMATS])
+    x = sorted([x for x in archive.namelist() if utils.splitext(x)[-1].lower() in utils.IMAGE_FORMATS])
     if x:
         return utils.data_object(archive, x[0])
